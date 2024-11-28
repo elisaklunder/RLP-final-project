@@ -25,6 +25,11 @@ def plot_training_metrics_with_sem(results: pd.DataFrame, figure_id: str):
     plt.ylabel("Mean Episode Reward")
     plt.legend(title="Hyperparameters")
     plt.grid()
+
+    # Ensure the directory exists before saving the plot
+    import os
+    os.makedirs("plots", exist_ok=True)
+
     plt.savefig(f"plots/{figure_id}_reward_comparison.png")
     plt.close()
 
@@ -42,5 +47,9 @@ def plot_training_metrics_with_sem(results: pd.DataFrame, figure_id: str):
     plt.ylabel("Mean Episode Length")
     plt.legend(title="Hyperparameters")
     plt.grid()
+
+    # Ensure the directory exists before saving the plot
+    os.makedirs("plots", exist_ok=True)
+
     plt.savefig(f"plots/{figure_id}_episode_length_comparison.png")
     plt.close()
