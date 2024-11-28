@@ -1,0 +1,7 @@
+gymnasium
+flappy_bird_gymnasium
+matplotlib
+numpy
+pandas
+stable-baselines3[extra]
+tensorflow
