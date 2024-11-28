@@ -1,37 +1,95 @@
-import os
+import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+
 from agents.PPO_agent import PPOAgent
 from envs.environment_handler import EnvironmentHandler
+from utils.plot import plot_training_metrics_with_sem
 
 
-def plot_rewards(rewards, filename="plots/rewards_plot.png"):
+def run_tuning():
+    gammas = [0.95, 0.99]
+    learning_rates = [0.0005, 0.005]
+    n_trials = 5
+    total_timesteps = 100000
+
+    results = []
+
+    for gamma in gammas:
+        for learning_rate in learning_rates:
+            for trial in range(1, n_trials + 1):
+                print(
+                    f"Running trial {trial} for gamma={gamma}, learning_rate={learning_rate}"
+                )
+
+                env_handler = EnvironmentHandler(
+                    env_type="FlappyBird", human_render=False
+                )
+                agent = PPOAgent(
+                    env_handler=env_handler, total_timesteps=total_timesteps
+                )
+
+                log_path = (
+                    f"logs/tuning/gamma_{gamma}_lr_{learning_rate}_trial_{trial}.csv"
+                )
+                agent.train(learning_rate=learning_rate, gamma=gamma, log_path=log_path)
+
+                env_handler.close()
+
+                results.append(
+                    {
+                        "gamma": gamma,
+                        "learning_rate": learning_rate,
+                        "trial": trial,
+                        "log_path": log_path,
+                    }
+                )
+
+    pd.DataFrame(results).to_csv("logs/tuning_metadata.csv", index=False)
+    print("Tuning completed. Metadata saved to logs/tuning_metadata.csv.")
+
+
+def analyze_tuning_results():
     """
-    Plot the rewards and save the plot to a file.
+    Analyze tuning results and generate plots.
     """
-    plt.figure()
-    plt.plot(rewards, label="Rewards")
-    plt.xlabel("Episode")
-    plt.ylabel("Reward")
-    plt.title("Training Rewards Over Episodes")
-    plt.legend()
-    plt.savefig(filename)
-    plt.close()
-    print(f"Rewards plot saved to {filename}.")
+    # Load tuning metadata
+    metadata = pd.read_csv("logs/tuning_metadata.csv")
+    aggregated_data = []
+
+    for (gamma, lr), group in metadata.groupby(["gamma", "learning_rate"]):
+        combined_data = []
+
+        for _, row in group.iterrows():
+            # Load metrics for each trial
+            trial_data = pd.read_csv(row["log_path"])
+            combined_data.append(trial_data)
+
+        # Combine data for the same hyperparameter combination
+        df = (
+            pd.concat(combined_data)
+            .groupby("timesteps")
+            .agg(
+                mean_ep_rew=("ep_rew_mean", "mean"),
+                sem_ep_rew=("ep_rew_mean", lambda x: x.std() / np.sqrt(len(x))),
+                mean_ep_len=("ep_len_mean", "mean"),
+                sem_ep_len=("ep_len_mean", lambda x: x.std() / np.sqrt(len(x))),
+            )
+            .reset_index()
+        )
+
+        # Add hyperparameters for reference
+        df["gamma"] = gamma
+        df["learning_rate"] = lr
+        aggregated_data.append(df)
+
+    # Combine all results into a single DataFrame
+    final_results = pd.concat(aggregated_data)
+    final_results.to_csv("logs/aggregated_tuning_results.csv", index=False)
+
+    # Generate plots
+    plot_training_metrics_with_sem(final_results, figure_id="PPO_agents")
+
 
 if __name__ == "__main__":
-
-    env_handler = EnvironmentHandler(env_type="FlappyBird", human_render=True)
-    agent = PPOAgent(env_handler=env_handler, total_timesteps=100000)
-
-    # agent.train(learning_rate=0.0003, gamma=0.99, batch_size=64)
-    # agent.save("logs/checkpoints/ppo_model")
-
-    # Save and plot rewards
-    agent.load("logs/checkpoints/ppo_model")
-    rewards = agent.evaluate(episodes=10)
-    rewards_df = pd.DataFrame({"episode": list(range(1, len(rewards) + 1)), "reward": rewards})
-    rewards_df.to_csv("logs/rewards.csv", index=False)
-    plot_rewards(rewards, filename="plots/rewards_plot.png")
-
-    env_handler.close()
+    run_tuning()
+    analyze_tuning_results()
