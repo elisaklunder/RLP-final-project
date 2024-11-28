@@ -1,5 +1,7 @@
 from stable_baselines3 import PPO
 
+from agents.PPO_logs_handler import SaveTrainingMetricsCallback
+
 
 class PPOAgent:
     def __init__(self, env_handler, total_timesteps: int = 100000):
@@ -19,7 +21,9 @@ class PPOAgent:
         learning_rate: float = 0.0003,
         gamma: float = 0.99,
         batch_size: int = 64,
-        log_dir="logs/tensorboard/",
+        verbose: str = 0,
+        log_path: str = None,
+        log_to_tensorboard: str | None = None,
     ):
         """
         Train the PPO agent using the environment handler and log to TensorBoard.
@@ -30,12 +34,11 @@ class PPOAgent:
             learning_rate=learning_rate,
             gamma=gamma,
             batch_size=batch_size,
-            verbose=1,
-            tensorboard_log=log_dir,
+            verbose=verbose,
+            tensorboard_log=log_to_tensorboard,
         )
-        print(f"Training PPO agent for {self.total_timesteps} timesteps...")
-        self.model.learn(total_timesteps=self.total_timesteps, progress_bar=True)
-        print("Training completed.")
+        callback = SaveTrainingMetricsCallback(log_path=log_path)
+        self.model.learn(total_timesteps=self.total_timesteps, callback=callback)
 
     def evaluate(self, episodes=10):
         """
