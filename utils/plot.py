@@ -20,6 +20,7 @@ def plot_training_metrics_with_sem(results: pd.DataFrame, figure_id: str):
             group["mean_ep_rew"] + group["sem_ep_rew"],
             alpha=0.2,
         )
+    plt.rcParams.update({'font.size': 14})
     plt.title("Mean Episode Reward with SEM")
     plt.xlabel("Timesteps")
     plt.ylabel("Mean Episode Reward")
@@ -34,6 +35,7 @@ def plot_training_metrics_with_sem(results: pd.DataFrame, figure_id: str):
     plt.close()
 
     plt.figure(figsize=(10, 6))
+    plt.rcParams.update({'font.size': 14})
     for (gamma, lr), group in results.groupby(["gamma", "learning_rate"]):
         plt.plot(group["timesteps"], group["mean_ep_len"], label=f"γ={gamma}, LR={lr}")
         plt.fill_between(
