@@ -7,43 +7,48 @@ from utils.plot import plot_training_metrics_with_sem
 
 
 def run_tuning():
-    gammas = 0.095#[0.95, 0.99]
-    learning_rates = 0.0005#[0.0005, 0.005]
+    gamma = 0.095
+    learning_rate = 0.0005
     batch_sizes = [32, 64, 128]
-    epochs_update = [4, 8, 16]
-    buffer_size = [10000, 20000]
-    n_trials = 5
-    total_timesteps = 100000
+    epochs_per_update = [4, 10, 16]
+    buffer_size = [1024, 2048]
+    n_trials = 3
+    total_timesteps = 1000000
 
     results = []
 
     for batch_size in batch_sizes:
-        for k in epochs_update:
-            for buffer in buffer_size:
+        for k in epochs_per_update:
+            for rollout_buffer_size in buffer_size:
                 for trial in range(1, n_trials + 1):
                     print(
-                        f"Running trial {trial} for batch_size={batch_size}, k={k}, buffer={buffer}"
+                        f"Running trial {trial} for batch_size={batch_size}, k={k}, buffer_size={rollout_buffer_size}"
                     )
 
                     env_handler = EnvironmentHandler(
                         env_type="FlappyBird", human_render=False
                     )
-                    agent = PPOAgent(
-                        env_handler=env_handler, total_timesteps=total_timesteps
-                    )
+                    agent = PPOAgent(env_handler=env_handler)
 
                     log_path = (
-                        f"logs/tuning/batch_size_{batch_size}_epochs_update_{k}_buffer_size_{buffer}_trial_{trial}.csv"
+                        f"logs/tuning/batch_size_{batch_size}_epochs_update_{k}_buffer_size_{rollout_buffer_size}_trial_{trial}.csv"
                     )
-                    agent.train(learning_rate=learning_rates, gamma=gammas, batch_size=batch_size, n_epochs =k, buffer_size=buffer, rollout_buffer_size=buffer,log_path=log_path)
+                    agent.train(training_steps=total_timesteps, 
+                                learning_rate=learning_rate, 
+                                rollout_buffer_size=rollout_buffer_size,
+                                batch_size=batch_size,
+                                epochs_per_update=k, 
+                                gamma=gamma,
+                                log_path=log_path, 
+                                log_to_tensorboard="logs/tensorboard")
 
                     env_handler.close()
 
                     results.append(
                         {
-                            "batch_size": batch_size,
-                            "epochs_update": k,
-                            "buffer_size": buffer,
+                            "B": batch_size,
+                            "k": k,
+                            "D": rollout_buffer_size,
                             "trial": trial,
                             "log_path": log_path,
                         }
@@ -60,16 +65,16 @@ def analyze_tuning_results():
     # Load tuning metadata
     metadata = pd.read_csv("logs/tuning_metadata.csv")
     aggregated_data = []
+    hyperparameter_cols = [col for col in metadata.columns if col not in ["trial", "log_path"]]
 
-    for (gamma, lr), group in metadata.groupby(["gamma", "learning_rate"]):
+    # Group by all hyperparameter columns
+    for hyperparams, group in metadata.groupby(hyperparameter_cols):
         combined_data = []
 
         for _, row in group.iterrows():
-            # Load metrics for each trial
             trial_data = pd.read_csv(row["log_path"])
             combined_data.append(trial_data)
 
-        # Combine data for the same hyperparameter combination
         df = (
             pd.concat(combined_data)
             .groupby("timesteps")
@@ -82,19 +87,16 @@ def analyze_tuning_results():
             .reset_index()
         )
 
-        # Add hyperparameters for reference
-        df["gamma"] = gamma
-        df["learning_rate"] = lr
+        for col, value in zip(hyperparameter_cols, hyperparams):
+            df[col] = value
+
         aggregated_data.append(df)
 
-    # Combine all results into a single DataFrame
     final_results = pd.concat(aggregated_data)
     final_results.to_csv("logs/aggregated_tuning_results.csv", index=False)
-
-    # Generate plots
     plot_training_metrics_with_sem(final_results, figure_id="PPO_agents")
 
 
 if __name__ == "__main__":
     run_tuning()
-    # analyze_tuning_results()
+    analyze_tuning_results()

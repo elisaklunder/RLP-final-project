@@ -17,27 +17,36 @@ class PPOAgent:
 
     def train(
         self,
-        training_steps=100000,
+        training_steps: int = 100000,
         learning_rate: float = 0.0005,
-        gamma: float = 0.99,
+        hidden_layers: int = 2,
+        neurons_per_hidden_layer: int = 64,
+        rollout_buffer_size: int = 2048,
         batch_size: int = 64,
+        epochs_per_update: int = 10, 
+        gamma: float = 0.99,
+        epsilon: float = 0.2,
         verbose: str = 0,
         log_path: str = None,
-        log_to_tensorboard: str | None = None,
+        log_to_tensorboard: str = None,
         progress_bar: bool = False,
     ):
         """
         Train the PPO agent using the environment handler and log to TensorBoard.
         """
         self.model = PPO(
-            "MlpPolicy",
-            self.env_handler.env,
+            policy="MlpPolicy",
+            env=self.env_handler.env,
             learning_rate=learning_rate,
+            n_steps=rollout_buffer_size,
             gamma=gamma,
             batch_size=batch_size,
+            n_epochs=epochs_per_update,
+            clip_range=epsilon,
             verbose=verbose,
             tensorboard_log=log_to_tensorboard,
         )
+
         if log_path:
             log_path = SaveTrainingMetricsCallback(log_path=log_path)
         self.model.learn(
