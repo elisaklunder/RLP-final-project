@@ -4,7 +4,7 @@ from agents.PPO_logs_handler import SaveTrainingMetricsCallback
 
 
 class PPOAgent:
-    def __init__(self, env_handler, total_timesteps: int = 100000):
+    def __init__(self, env_handler):
         """
         Initialize the PPOAgent with a specific environment.
 
@@ -13,17 +13,18 @@ class PPOAgent:
         - total_timesteps: Number of timesteps for training.
         """
         self.env_handler = env_handler
-        self.total_timesteps = total_timesteps
         self.model = None
 
     def train(
         self,
-        learning_rate: float = 0.0003,
+        training_steps=100000,
+        learning_rate: float = 0.0005,
         gamma: float = 0.99,
         batch_size: int = 64,
         verbose: str = 0,
         log_path: str = None,
         log_to_tensorboard: str | None = None,
+        progress_bar: bool = False,
     ):
         """
         Train the PPO agent using the environment handler and log to TensorBoard.
@@ -37,10 +38,13 @@ class PPOAgent:
             verbose=verbose,
             tensorboard_log=log_to_tensorboard,
         )
-        callback = SaveTrainingMetricsCallback(log_path=log_path)
-        self.model.learn(total_timesteps=self.total_timesteps, callback=callback)
+        if log_path:
+            log_path = SaveTrainingMetricsCallback(log_path=log_path)
+        self.model.learn(
+            total_timesteps=training_steps, callback=log_path, progress_bar=progress_bar
+        )
 
-    def evaluate(self, episodes=10):
+    def evaluate(self, episodes=100):
         """
         Evaluate the PPO agent.
         """

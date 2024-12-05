@@ -1,9 +1,10 @@
+from typing import List
+
 import numpy as np
 import pandas as pd
 
 from agents.PPO_agent import PPOAgent
 from envs.environment_handler import EnvironmentHandler
-from utils.plot import plot_training_metrics_with_sem
 
 
 def run_tuning():
@@ -24,14 +25,17 @@ def run_tuning():
                 env_handler = EnvironmentHandler(
                     env_type="FlappyBird", human_render=False
                 )
-                agent = PPOAgent(
-                    env_handler=env_handler, total_timesteps=total_timesteps
-                )
+                agent = PPOAgent(env_handler=env_handler)
 
                 log_path = (
                     f"logs/tuning/gamma_{gamma}_lr_{learning_rate}_trial_{trial}.csv"
                 )
-                agent.train(learning_rate=learning_rate, gamma=gamma, log_path=log_path)
+                agent.train(
+                    training_steps=total_timesteps,
+                    learning_rate=learning_rate,
+                    gamma=gamma,
+                    log_path=log_path,
+                )
 
                 env_handler.close()
 
@@ -48,48 +52,79 @@ def run_tuning():
     print("Tuning completed. Metadata saved to logs/tuning_metadata.csv.")
 
 
-def analyze_tuning_results():
+def aggregate_results(
+    metadata_path: str = "logs/tuning_metadata.csv",
+    output_path: str = "logs/aggregated_tuning_results.csv",
+    value_columns: List[str] = None,
+    hyperparameter_columns: List[str] = None,
+):
     """
-    Analyze tuning results and generate plots.
+    Analyze tuning results and aggregate data dynamically for any set of hyperparameters and metrics.
+
+    Args:
+    - metadata_path: Path to the metadata CSV containing hyperparameters and log paths.
+    - output_path: Path to save the aggregated results as a CSV file.
+    - value_columns: List of columns to aggregate (e.g., ["ep_rew_mean", "ep_len_mean"]).
+      If None, all columns except `timesteps` and hyperparameters will be aggregated.
+    - hyperparameter_columns: List of hyperparameter columns to group by.
+      If None, all columns except `log_path` and `timesteps` will be considered hyperparameters.
+
+    Returns:
+    - final_results: DataFrame with aggregated results.
     """
-    # Load tuning metadata
-    metadata = pd.read_csv("logs/tuning_metadata.csv")
+    metadata = pd.read_csv(metadata_path)
     aggregated_data = []
 
-    for (gamma, lr), group in metadata.groupby(["gamma", "learning_rate"]):
-        combined_data = []
+    if hyperparameter_columns is None:
+        hyperparameter_columns = [
+            col for col in metadata.columns if col not in ["log_path"]
+        ]
 
+    for hyperparams, group in metadata.groupby(hyperparameter_columns):
+        combined_data = []
         for _, row in group.iterrows():
-            # Load metrics for each trial
             trial_data = pd.read_csv(row["log_path"])
             combined_data.append(trial_data)
 
-        # Combine data for the same hyperparameter combination
-        df = (
-            pd.concat(combined_data)
-            .groupby("timesteps")
-            .agg(
-                mean_ep_rew=("ep_rew_mean", "mean"),
-                sem_ep_rew=("ep_rew_mean", lambda x: x.std() / np.sqrt(len(x))),
-                mean_ep_len=("ep_len_mean", "mean"),
-                sem_ep_len=("ep_len_mean", lambda x: x.std() / np.sqrt(len(x))),
+        combined_df = pd.concat(combined_data)
+
+        if value_columns is None:
+            value_columns = [
+                col for col in combined_df.columns if col not in ["timesteps"]
+            ]
+
+        agg_funcs = {}
+        for value_col in value_columns:
+            agg_funcs[f"mean_{value_col}"] = (value_col, "mean")
+            agg_funcs[f"sem_{value_col}"] = (
+                value_col,
+                lambda x: x.std() / np.sqrt(len(x)),
             )
-            .reset_index()
-        )
 
-        # Add hyperparameters for reference
-        df["gamma"] = gamma
-        df["learning_rate"] = lr
-        aggregated_data.append(df)
+        aggregated_df = combined_df.groupby("timesteps").agg(**agg_funcs).reset_index()
 
-    # Combine all results into a single DataFrame
+        for col, value in zip(hyperparameter_columns, hyperparams):
+            aggregated_df[col] = value
+
+        aggregated_data.append(aggregated_df)
+
     final_results = pd.concat(aggregated_data)
-    final_results.to_csv("logs/aggregated_tuning_results.csv", index=False)
+    final_results.to_csv(output_path, index=False)
 
-    # Generate plots
-    plot_training_metrics_with_sem(final_results, figure_id="PPO_agents")
+    return final_results
 
 
 if __name__ == "__main__":
-    run_tuning()
-    analyze_tuning_results()
+    # run_tuning()
+    # final_results = aggregate_results()
+    # plot_training_metrics_with_sem(final_results, figure_id="PPO_agents")
+    # results = pd.read_csv("logs/aggregated_tuning_results.csv")
+    # calculate_mean_and_se(
+    #     results,
+    #     value_columns=["mean_ep_rew", "mean_ep_len"],
+    #     hyperparameter_columns=["learning_rate", "gamma"],
+    # )
+
+    env_handler = EnvironmentHandler(env_type="FlappyBird", human_render=True)
+    agent = PPOAgent(env_handler=env_handler)
+    agent.train()
