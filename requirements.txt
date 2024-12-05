@@ -1,5 +1,5 @@
 gymnasium
-flappy_bird_gymnasium
+flappy-bird-gymnasium
 matplotlib
 numpy
 pandas

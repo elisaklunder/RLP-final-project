@@ -1,21 +1,55 @@
-gamma,learning_rate,trial,log_path
-0.95,0.0005,1,logs/tuning/gamma_0.95_lr_0.0005_trial_1.csv
-0.95,0.0005,2,logs/tuning/gamma_0.95_lr_0.0005_trial_2.csv
-0.95,0.0005,3,logs/tuning/gamma_0.95_lr_0.0005_trial_3.csv
-0.95,0.0005,4,logs/tuning/gamma_0.95_lr_0.0005_trial_4.csv
-0.95,0.0005,5,logs/tuning/gamma_0.95_lr_0.0005_trial_5.csv
-0.95,0.005,1,logs/tuning/gamma_0.95_lr_0.005_trial_1.csv
-0.95,0.005,2,logs/tuning/gamma_0.95_lr_0.005_trial_2.csv
-0.95,0.005,3,logs/tuning/gamma_0.95_lr_0.005_trial_3.csv
-0.95,0.005,4,logs/tuning/gamma_0.95_lr_0.005_trial_4.csv
-0.95,0.005,5,logs/tuning/gamma_0.95_lr_0.005_trial_5.csv
-0.99,0.0005,1,logs/tuning/gamma_0.99_lr_0.0005_trial_1.csv
-0.99,0.0005,2,logs/tuning/gamma_0.99_lr_0.0005_trial_2.csv
-0.99,0.0005,3,logs/tuning/gamma_0.99_lr_0.0005_trial_3.csv
-0.99,0.0005,4,logs/tuning/gamma_0.99_lr_0.0005_trial_4.csv
-0.99,0.0005,5,logs/tuning/gamma_0.99_lr_0.0005_trial_5.csv
-0.99,0.005,1,logs/tuning/gamma_0.99_lr_0.005_trial_1.csv
-0.99,0.005,2,logs/tuning/gamma_0.99_lr_0.005_trial_2.csv
-0.99,0.005,3,logs/tuning/gamma_0.99_lr_0.005_trial_3.csv
-0.99,0.005,4,logs/tuning/gamma_0.99_lr_0.005_trial_4.csv
-0.99,0.005,5,logs/tuning/gamma_0.99_lr_0.005_trial_5.csv
+B,k,D,trial,log_path
+32,"[4, 10, 16]",1024,1,logs/tuning/batch_size_32_epochs_update_4_buffer_size_1024_trial_1.csv
+32,"[4, 10, 16]",1024,2,logs/tuning/batch_size_32_epochs_update_4_buffer_size_1024_trial_2.csv
+32,"[4, 10, 16]",1024,3,logs/tuning/batch_size_32_epochs_update_4_buffer_size_1024_trial_3.csv
+32,"[4, 10, 16]",2048,1,logs/tuning/batch_size_32_epochs_update_4_buffer_size_2048_trial_1.csv
+32,"[4, 10, 16]",2048,2,logs/tuning/batch_size_32_epochs_update_4_buffer_size_2048_trial_2.csv
+32,"[4, 10, 16]",2048,3,logs/tuning/batch_size_32_epochs_update_4_buffer_size_2048_trial_3.csv
+32,"[4, 10, 16]",1024,1,logs/tuning/batch_size_32_epochs_update_10_buffer_size_1024_trial_1.csv
+32,"[4, 10, 16]",1024,2,logs/tuning/batch_size_32_epochs_update_10_buffer_size_1024_trial_2.csv
+32,"[4, 10, 16]",1024,3,logs/tuning/batch_size_32_epochs_update_10_buffer_size_1024_trial_3.csv
+32,"[4, 10, 16]",2048,1,logs/tuning/batch_size_32_epochs_update_10_buffer_size_2048_trial_1.csv
+32,"[4, 10, 16]",2048,2,logs/tuning/batch_size_32_epochs_update_10_buffer_size_2048_trial_2.csv
+32,"[4, 10, 16]",2048,3,logs/tuning/batch_size_32_epochs_update_10_buffer_size_2048_trial_3.csv
+32,"[4, 10, 16]",1024,1,logs/tuning/batch_size_32_epochs_update_16_buffer_size_1024_trial_1.csv
+32,"[4, 10, 16]",1024,2,logs/tuning/batch_size_32_epochs_update_16_buffer_size_1024_trial_2.csv
+32,"[4, 10, 16]",1024,3,logs/tuning/batch_size_32_epochs_update_16_buffer_size_1024_trial_3.csv
+32,"[4, 10, 16]",2048,1,logs/tuning/batch_size_32_epochs_update_16_buffer_size_2048_trial_1.csv
+32,"[4, 10, 16]",2048,2,logs/tuning/batch_size_32_epochs_update_16_buffer_size_2048_trial_2.csv
+32,"[4, 10, 16]",2048,3,logs/tuning/batch_size_32_epochs_update_16_buffer_size_2048_trial_3.csv
+64,"[4, 10, 16]",1024,1,logs/tuning/batch_size_64_epochs_update_4_buffer_size_1024_trial_1.csv
+64,"[4, 10, 16]",1024,2,logs/tuning/batch_size_64_epochs_update_4_buffer_size_1024_trial_2.csv
+64,"[4, 10, 16]",1024,3,logs/tuning/batch_size_64_epochs_update_4_buffer_size_1024_trial_3.csv
+64,"[4, 10, 16]",2048,1,logs/tuning/batch_size_64_epochs_update_4_buffer_size_2048_trial_1.csv
+64,"[4, 10, 16]",2048,2,logs/tuning/batch_size_64_epochs_update_4_buffer_size_2048_trial_2.csv
+64,"[4, 10, 16]",2048,3,logs/tuning/batch_size_64_epochs_update_4_buffer_size_2048_trial_3.csv
+64,"[4, 10, 16]",1024,1,logs/tuning/batch_size_64_epochs_update_10_buffer_size_1024_trial_1.csv
+64,"[4, 10, 16]",1024,2,logs/tuning/batch_size_64_epochs_update_10_buffer_size_1024_trial_2.csv
+64,"[4, 10, 16]",1024,3,logs/tuning/batch_size_64_epochs_update_10_buffer_size_1024_trial_3.csv
+64,"[4, 10, 16]",2048,1,logs/tuning/batch_size_64_epochs_update_10_buffer_size_2048_trial_1.csv
+64,"[4, 10, 16]",2048,2,logs/tuning/batch_size_64_epochs_update_10_buffer_size_2048_trial_2.csv
+64,"[4, 10, 16]",2048,3,logs/tuning/batch_size_64_epochs_update_10_buffer_size_2048_trial_3.csv
+64,"[4, 10, 16]",1024,1,logs/tuning/batch_size_64_epochs_update_16_buffer_size_1024_trial_1.csv
+64,"[4, 10, 16]",1024,2,logs/tuning/batch_size_64_epochs_update_16_buffer_size_1024_trial_2.csv
+64,"[4, 10, 16]",1024,3,logs/tuning/batch_size_64_epochs_update_16_buffer_size_1024_trial_3.csv
+64,"[4, 10, 16]",2048,1,logs/tuning/batch_size_64_epochs_update_16_buffer_size_2048_trial_1.csv
+64,"[4, 10, 16]",2048,2,logs/tuning/batch_size_64_epochs_update_16_buffer_size_2048_trial_2.csv
+64,"[4, 10, 16]",2048,3,logs/tuning/batch_size_64_epochs_update_16_buffer_size_2048_trial_3.csv
+128,"[4, 10, 16]",1024,1,logs/tuning/batch_size_128_epochs_update_4_buffer_size_1024_trial_1.csv
+128,"[4, 10, 16]",1024,2,logs/tuning/batch_size_128_epochs_update_4_buffer_size_1024_trial_2.csv
+128,"[4, 10, 16]",1024,3,logs/tuning/batch_size_128_epochs_update_4_buffer_size_1024_trial_3.csv
+128,"[4, 10, 16]",2048,1,logs/tuning/batch_size_128_epochs_update_4_buffer_size_2048_trial_1.csv
+128,"[4, 10, 16]",2048,2,logs/tuning/batch_size_128_epochs_update_4_buffer_size_2048_trial_2.csv
+128,"[4, 10, 16]",2048,3,logs/tuning/batch_size_128_epochs_update_4_buffer_size_2048_trial_3.csv
+128,"[4, 10, 16]",1024,1,logs/tuning/batch_size_128_epochs_update_10_buffer_size_1024_trial_1.csv
+128,"[4, 10, 16]",1024,2,logs/tuning/batch_size_128_epochs_update_10_buffer_size_1024_trial_2.csv
+128,"[4, 10, 16]",1024,3,logs/tuning/batch_size_128_epochs_update_10_buffer_size_1024_trial_3.csv
+128,"[4, 10, 16]",2048,1,logs/tuning/batch_size_128_epochs_update_10_buffer_size_2048_trial_1.csv
+128,"[4, 10, 16]",2048,2,logs/tuning/batch_size_128_epochs_update_10_buffer_size_2048_trial_2.csv
+128,"[4, 10, 16]",2048,3,logs/tuning/batch_size_128_epochs_update_10_buffer_size_2048_trial_3.csv
+128,"[4, 10, 16]",1024,1,logs/tuning/batch_size_128_epochs_update_16_buffer_size_1024_trial_1.csv
+128,"[4, 10, 16]",1024,2,logs/tuning/batch_size_128_epochs_update_16_buffer_size_1024_trial_2.csv
+128,"[4, 10, 16]",1024,3,logs/tuning/batch_size_128_epochs_update_16_buffer_size_1024_trial_3.csv
+128,"[4, 10, 16]",2048,1,logs/tuning/batch_size_128_epochs_update_16_buffer_size_2048_trial_1.csv
+128,"[4, 10, 16]",2048,2,logs/tuning/batch_size_128_epochs_update_16_buffer_size_2048_trial_2.csv
+128,"[4, 10, 16]",2048,3,logs/tuning/batch_size_128_epochs_update_16_buffer_size_2048_trial_3.csv
