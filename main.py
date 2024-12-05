@@ -2,31 +2,23 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-
-from agents.PPO_agent import PPOAgent
+from agents.SB3_PPO_agent import PPOAgent
 from envs.environment_handler import EnvironmentHandler
 
 
 def run_tuning():
-    gammas = [0.95, 0.99]
-    learning_rates = [0.0005, 0.005]
-    n_trials = 5
     total_timesteps = 100000
-
     results = []
 
-    for gamma in gammas:
-        for learning_rate in learning_rates:
-            for trial in range(1, n_trials + 1):
-                print(
-                    f"Running trial {trial} for gamma={gamma}, learning_rate={learning_rate}"
-                )
+    env_handler = EnvironmentHandler(
+        env_type="FlappyBird", human_render=False
+    )
+    agent = PPOAgent(
+        env_handler=env_handler, total_timesteps=total_timesteps
+    )
 
-                env_handler = EnvironmentHandler(
-                    env_type="FlappyBird", human_render=False
-                )
-                agent = PPOAgent(env_handler=env_handler)
 
+    agent.train(learning_rate=learning_rate, gamma=gamma, log_path=log_path)
                 log_path = (
                     f"logs/tuning/gamma_{gamma}_lr_{learning_rate}_trial_{trial}.csv"
                 )
@@ -37,16 +29,8 @@ def run_tuning():
                     log_path=log_path,
                 )
 
-                env_handler.close()
+    env_handler.close()
 
-                results.append(
-                    {
-                        "gamma": gamma,
-                        "learning_rate": learning_rate,
-                        "trial": trial,
-                        "log_path": log_path,
-                    }
-                )
 
     pd.DataFrame(results).to_csv("logs/tuning_metadata.csv", index=False)
     print("Tuning completed. Metadata saved to logs/tuning_metadata.csv.")
