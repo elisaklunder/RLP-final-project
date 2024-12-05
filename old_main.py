@@ -7,42 +7,47 @@ from utils.plot import plot_training_metrics_with_sem
 
 
 def run_tuning():
-    gammas = [0.95, 0.99]
-    learning_rates = [0.0005, 0.005]
+    gammas = 0.095#[0.95, 0.99]
+    learning_rates = 0.0005#[0.0005, 0.005]
+    batch_sizes = [32, 64, 128]
+    epochs_update = [4, 8, 16]
+    buffer_size = [10000, 20000]
     n_trials = 5
     total_timesteps = 100000
 
     results = []
 
-    for gamma in gammas:
-        for learning_rate in learning_rates:
-            for trial in range(1, n_trials + 1):
-                print(
-                    f"Running trial {trial} for gamma={gamma}, learning_rate={learning_rate}"
-                )
+    for batch_size in batch_sizes:
+        for k in epochs_update:
+            for buffer in buffer_size:
+                for trial in range(1, n_trials + 1):
+                    print(
+                        f"Running trial {trial} for batch_size={batch_size}, k={k}, buffer={buffer}"
+                    )
 
-                env_handler = EnvironmentHandler(
-                    env_type="FlappyBird", human_render=False
-                )
-                agent = PPOAgent(
-                    env_handler=env_handler, total_timesteps=total_timesteps
-                )
+                    env_handler = EnvironmentHandler(
+                        env_type="FlappyBird", human_render=False
+                    )
+                    agent = PPOAgent(
+                        env_handler=env_handler, total_timesteps=total_timesteps
+                    )
 
-                log_path = (
-                    f"logs/tuning/gamma_{gamma}_lr_{learning_rate}_trial_{trial}.csv"
-                )
-                agent.train(learning_rate=learning_rate, gamma=gamma, log_path=log_path)
+                    log_path = (
+                        f"logs/tuning/batch_size_{batch_size}_epochs_update_{k}_buffer_size_{buffer}_trial_{trial}.csv"
+                    )
+                    agent.train(learning_rate=learning_rates, gamma=gammas, batch_size=batch_size, n_epochs =k, buffer_size=buffer, rollout_buffer_size=buffer,log_path=log_path)
 
-                env_handler.close()
+                    env_handler.close()
 
-                results.append(
-                    {
-                        "gamma": gamma,
-                        "learning_rate": learning_rate,
-                        "trial": trial,
-                        "log_path": log_path,
-                    }
-                )
+                    results.append(
+                        {
+                            "batch_size": batch_size,
+                            "epochs_update": k,
+                            "buffer_size": buffer,
+                            "trial": trial,
+                            "log_path": log_path,
+                        }
+                    )
 
     pd.DataFrame(results).to_csv("logs/tuning_metadata.csv", index=False)
     print("Tuning completed. Metadata saved to logs/tuning_metadata.csv.")
