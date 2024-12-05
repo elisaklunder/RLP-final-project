@@ -6,3 +6,4 @@ pandas
 stable-baselines3[extra]
 tensorflow
 tabulate
+torch
