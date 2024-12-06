@@ -22,7 +22,7 @@ def run_tuning():
             for rollout_buffer_size in buffer_size:
                 for trial in range(1, n_trials + 1):
                     print(
-                        f"Running trial {trial} for batch_size={batch_size}, k={k}, buffer_size={rollout_buffer_size}"
+                        f"Running trial {trial} for batch_size={batch_size}, k={k}, buffer_size={rollout_buffer_size}", flush=True
                     )
 
                     env_handler = EnvironmentHandler(

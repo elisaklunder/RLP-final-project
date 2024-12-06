@@ -1,0 +1,157 @@
+The following modules were not unloaded:
+  (Use "module --force purge" to unload all):
+
+  1) 2023.01   2) StdEnv
+2024-12-06 13:43:30.332706: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:477] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1733489010.356881 2305246 cuda_dnn.cc:8310] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1733489010.362170 2305246 cuda_blas.cc:1418] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-12-06 13:43:30.382996: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Running trial 1 for batch_size=32, k=4, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_4_buffer_size_1024_trial_1.csv
+Running trial 2 for batch_size=32, k=4, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_4_buffer_size_1024_trial_2.csv
+Running trial 3 for batch_size=32, k=4, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_4_buffer_size_1024_trial_3.csv
+Running trial 1 for batch_size=32, k=4, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_4_buffer_size_2048_trial_1.csv
+Running trial 2 for batch_size=32, k=4, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_4_buffer_size_2048_trial_2.csv
+Running trial 3 for batch_size=32, k=4, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_4_buffer_size_2048_trial_3.csv
+Running trial 1 for batch_size=32, k=10, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_10_buffer_size_1024_trial_1.csv
+Running trial 2 for batch_size=32, k=10, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_10_buffer_size_1024_trial_2.csv
+Running trial 3 for batch_size=32, k=10, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_10_buffer_size_1024_trial_3.csv
+Running trial 1 for batch_size=32, k=10, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_10_buffer_size_2048_trial_1.csv
+Running trial 2 for batch_size=32, k=10, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_10_buffer_size_2048_trial_2.csv
+Running trial 3 for batch_size=32, k=10, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_10_buffer_size_2048_trial_3.csv
+Running trial 1 for batch_size=32, k=16, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_16_buffer_size_1024_trial_1.csv
+Running trial 2 for batch_size=32, k=16, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_16_buffer_size_1024_trial_2.csv
+Running trial 3 for batch_size=32, k=16, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_16_buffer_size_1024_trial_3.csv
+Running trial 1 for batch_size=32, k=16, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_16_buffer_size_2048_trial_1.csv
+Running trial 2 for batch_size=32, k=16, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_16_buffer_size_2048_trial_2.csv
+Running trial 3 for batch_size=32, k=16, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_32_epochs_update_16_buffer_size_2048_trial_3.csv
+Running trial 1 for batch_size=64, k=4, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_4_buffer_size_1024_trial_1.csv
+Running trial 2 for batch_size=64, k=4, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_4_buffer_size_1024_trial_2.csv
+Running trial 3 for batch_size=64, k=4, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_4_buffer_size_1024_trial_3.csv
+Running trial 1 for batch_size=64, k=4, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_4_buffer_size_2048_trial_1.csv
+Running trial 2 for batch_size=64, k=4, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_4_buffer_size_2048_trial_2.csv
+Running trial 3 for batch_size=64, k=4, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_4_buffer_size_2048_trial_3.csv
+Running trial 1 for batch_size=64, k=10, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_10_buffer_size_1024_trial_1.csv
+Running trial 2 for batch_size=64, k=10, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_10_buffer_size_1024_trial_2.csv
+Running trial 3 for batch_size=64, k=10, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_10_buffer_size_1024_trial_3.csv
+Running trial 1 for batch_size=64, k=10, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_10_buffer_size_2048_trial_1.csv
+Running trial 2 for batch_size=64, k=10, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_10_buffer_size_2048_trial_2.csv
+Running trial 3 for batch_size=64, k=10, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_10_buffer_size_2048_trial_3.csv
+Running trial 1 for batch_size=64, k=16, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_16_buffer_size_1024_trial_1.csv
+Running trial 2 for batch_size=64, k=16, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_16_buffer_size_1024_trial_2.csv
+Running trial 3 for batch_size=64, k=16, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_16_buffer_size_1024_trial_3.csv
+Running trial 1 for batch_size=64, k=16, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_16_buffer_size_2048_trial_1.csv
+Running trial 2 for batch_size=64, k=16, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_16_buffer_size_2048_trial_2.csv
+Running trial 3 for batch_size=64, k=16, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_64_epochs_update_16_buffer_size_2048_trial_3.csv
+Running trial 1 for batch_size=128, k=4, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_4_buffer_size_1024_trial_1.csv
+Running trial 2 for batch_size=128, k=4, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_4_buffer_size_1024_trial_2.csv
+Running trial 3 for batch_size=128, k=4, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_4_buffer_size_1024_trial_3.csv
+Running trial 1 for batch_size=128, k=4, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_4_buffer_size_2048_trial_1.csv
+Running trial 2 for batch_size=128, k=4, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_4_buffer_size_2048_trial_2.csv
+Running trial 3 for batch_size=128, k=4, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_4_buffer_size_2048_trial_3.csv
+Running trial 1 for batch_size=128, k=10, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_10_buffer_size_1024_trial_1.csv
+Running trial 2 for batch_size=128, k=10, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_10_buffer_size_1024_trial_2.csv
+Running trial 3 for batch_size=128, k=10, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_10_buffer_size_1024_trial_3.csv
+Running trial 1 for batch_size=128, k=10, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_10_buffer_size_2048_trial_1.csv
+Running trial 2 for batch_size=128, k=10, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_10_buffer_size_2048_trial_2.csv
+Running trial 3 for batch_size=128, k=10, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_10_buffer_size_2048_trial_3.csv
+Running trial 1 for batch_size=128, k=16, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_16_buffer_size_1024_trial_1.csv
+Running trial 2 for batch_size=128, k=16, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_16_buffer_size_1024_trial_2.csv
+Running trial 3 for batch_size=128, k=16, buffer_size=1024
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_16_buffer_size_1024_trial_3.csv
+Running trial 1 for batch_size=128, k=16, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_16_buffer_size_2048_trial_1.csv
+Running trial 2 for batch_size=128, k=16, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_16_buffer_size_2048_trial_2.csv
+Running trial 3 for batch_size=128, k=16, buffer_size=2048
+Training metrics saved to logs/tuning/batch_size_128_epochs_update_16_buffer_size_2048_trial_3.csv
+Tuning completed. Metadata saved to logs/tuning_metadata.csv.
+Plotting succesfull.
+
+###############################################################################
+Hábrók Cluster
+Job 14070979 for user s5190940
+Finished at: Fri Dec  6 15:19:42 CET 2024
+
+Job details:
+============
+
+Job ID                         : 14070979
+Name                           : cpu_job
+User                           : s5190940
+Partition                      : regularmedium
+Nodes                          : node101
+Number of Nodes                : 1
+Cores                          : 1
+Number of Tasks                : 1
+State                          : RUNNING  
+Submit                         : 2024-12-06T13:43:18
+Start                          : 2024-12-06T13:43:19
+End                            : --
+Reserved walltime              : 12:00:00
+Used walltime                  : 01:36:23
+Used CPU time                  : -- 
+% User (Computation)           : --
+% System (I/O)                 : --
+Total memory reserved          : 8000M
+Maximum memory used            : --
+
+Acknowledgements:
+=================
+
+Please see this page for information about acknowledging Hábrók in your publications:
+
+https://wiki.hpc.rug.nl/habrok/introduction/scientific_output
+
+################################################################################

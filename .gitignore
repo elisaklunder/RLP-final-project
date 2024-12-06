@@ -162,3 +162,9 @@ cython_debug/
 #.idea/
 
 logs/
+logs/tuning/
+logs/checkpoints/
+logs/training/
+logs/tensorboard/
+logs/aggregated_tuning_results.csv
+logs/tuning_metadata.csv
