@@ -13,7 +13,7 @@ def run_tuning():
     epochs_per_update = [4, 10, 16]
     buffer_size = [1024, 2048]
     n_trials = 3
-    total_timesteps = 1000000
+    total_timesteps = 100000
 
     results = []
 
@@ -29,7 +29,6 @@ def run_tuning():
                         env_type="FlappyBird", human_render=False
                     )
                     agent = PPOAgent(env_handler=env_handler)
-
                     log_path = (
                         f"logs/tuning/batch_size_{batch_size}_epochs_update_{k}_buffer_size_{rollout_buffer_size}_trial_{trial}.csv"
                     )
