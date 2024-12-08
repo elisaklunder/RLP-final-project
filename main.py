@@ -10,7 +10,7 @@ def run_tuning():
     gammas = [0.95, 0.99]
     learning_rates = [0.0005, 0.005]
     n_trials = 5
-    total_timesteps = 100000
+    total_timesteps = 10000
 
     results = []
 

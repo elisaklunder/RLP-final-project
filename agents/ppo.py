@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from agents.SB3_PPO_agent import PPOAgentSB
+# from agents.SB3_PPO_agent import PPOAgentSB
 from envs.environment_handler import EnvironmentHandler
 
 
@@ -168,7 +168,10 @@ def compute_gae(rewards, dones, state_values, gamma=0.95, lam=0.95):
         )
         gae = delta + gamma * lam * (1 - dones[t]) * gae
         advantages.insert(0, gae)
-        returns.insert(0, gae + state_values[t])
+        return_t = 0
+        for k in range(t, len(rewards)):
+            return_t += rewards[k] * (gamma ** (k - t))
+        returns.append(return_t)
     return advantages, returns
 
 
@@ -329,19 +332,19 @@ if __name__ == "__main__":
     agent = PPOAgent(env_handler, device="cpu")
 
     agent.train(
-        num_epochs=100000,
+        num_epochs=10000,
         t_max=2048,  # after how many actions we update the policy
         batch_size=64,
         clip_epsilon=0.2,
         log_path=log_path,
     )
 
-    print("SB3 agent")
-    sb_agent = PPOAgentSB(env_handler, total_timesteps=1000)
-    sb_agent.train(learning_rate=3e-4, gamma=0.95)
-    agent.evaluate(episodes=20)
-    print("-" * 10)
-    sb_agent.evaluate(episodes=20)
+    # print("SB3 agent")
+    # sb_agent = PPOAgentSB(env_handler, total_timesteps=1000)
+    # sb_agent.train(learning_rate=3e-4, gamma=0.95)
+    # agent.evaluate(episodes=20)
+    # print("-" * 10)
+    # sb_agent.evaluate(episodes=20)
 
     env_handler.close()
     # Evaluate the trained agent
