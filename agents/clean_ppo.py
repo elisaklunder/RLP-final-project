@@ -293,7 +293,7 @@ class PPOTrainer:
 
             # After updating, log mean and standard error of episodes ended in this iteration
             if len(iteration_episode_returns) > 0:
-                print(f"iteration_episode_returns: {iteration_episode_returns}")
+                print(f"episode returns: {iteration_episode_returns}")
                 mean_return = np.mean(iteration_episode_returns)
                 std_return = np.std(iteration_episode_returns)
                 n_eps = len(iteration_episode_returns)
@@ -448,8 +448,8 @@ class PPOTrainer:
         self.writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         self.writer.add_scalar("losses/explained_variance", explained_var, global_step)
         sps = int(global_step / (time.time() - start_time))
-        print("SPS:", sps)
-        self.writer.add_scalar("charts/SPS", sps, global_step)
+
+        self.writer.add_scalar("charts/steps_per_second", sps, global_step)
 
 
 if __name__ == "__main__":
