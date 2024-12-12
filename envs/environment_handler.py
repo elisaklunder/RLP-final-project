@@ -13,30 +13,29 @@ class EnvironmentHandler:
         self.env_type = env_type
         self.seed = seed
 
-        if self.env_type == "FlappyBird":
+        if self.env_type:
             if human_render:
                 self.env = gymnasium.make(
-                    "FlappyBird-v0", render_mode="human", use_lidar=False
+                    self.env_type, render_mode="human"
                 )
             else:
-                self.env = gymnasium.make("FlappyBird-v0", use_lidar=False)
+                self.env = gymnasium.make(self.env_type)
             self.env.reset(seed=self.seed)
+
 
     def reset(self, seed=None):
         """
         Reset the environment and return the initial observation.
         """
-        if self.env_type == "FlappyBird":
-            if seed:
-                self.seed = seed
-            return self.env.reset(seed=self.seed)
+        if seed:
+            self.seed = seed
+        return self.env.reset(seed=self.seed)
 
     def step(self, action):
         """
         Perform a step in the environment with the given action.
         """
-        if self.env_type == "FlappyBird":
-            return self.env.step(action)
+        return self.env.step(action)
 
     def close(self):
         """
