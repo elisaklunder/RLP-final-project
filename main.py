@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from agents.SB3_PPO_agent import PPOAgent
+from agents.SB3_PPO_agent import PPOAgentSB
 from envs.environment_handler import EnvironmentHandler
 from utils.plot import plot_training_metrics_with_sem
 
@@ -24,7 +24,7 @@ def run_tuning():
                 env_handler = EnvironmentHandler(
                     env_type="FlappyBird", human_render=False
                 )
-                agent = PPOAgent(
+                agent = PPOAgentSB(
                     env_handler=env_handler, total_timesteps=total_timesteps
                 )
 
@@ -92,4 +92,5 @@ def analyze_tuning_results():
 
 if __name__ == "__main__":
     # run_tuning()
-    analyze_tuning_results()
+    #analyze_tuning_results()
+    

@@ -1,64 +1,19 @@
-import flappy_bird_gymnasium  # noqa: F401
 import gymnasium
-
+import flappy_bird_gymnasium 
+from stable_baselines3.common.env_util import make_vec_env
 
 class EnvironmentHandler:
-    def __init__(self, env_type, human_render: bool = True, seed: int = 42):
-        """
-        Args:
-        - environment: The environment instance (FlppyBird or FinRL).
-        - seed: random seed for initial resetting of the environment.
-        """
-        self.env = None
+    def __init__(self, env_type: str, human_render: bool = False, num_envs: int = 1):
         self.env_type = env_type
-        self.seed = seed
+        self.num_envs = num_envs
+        self.human_render = human_render
+        self.env = make_vec_env(lambda: gymnasium.make(env_type), n_envs=num_envs)
 
-        if self.env_type:
-            if human_render:
-                self.env = gymnasium.make(
-                    self.env_type, render_mode="human"
-                )
-            else:
-                self.env = gymnasium.make(self.env_type)
-            self.env.reset(seed=self.seed)
-
-
-    def reset(self, seed=None):
-        """
-        Reset the environment and return the initial observation.
-        """
-        if seed:
-            self.seed = seed
-        return self.env.reset(seed=self.seed)
+    def reset(self):
+        return self.env.reset()
 
     def step(self, action):
-        """
-        Perform a step in the environment with the given action.
-        """
         return self.env.step(action)
 
     def close(self):
-        """
-        Close the environment.
-        """
-        if hasattr(self.env, "close"):
-            self.env.close()
-
-
-if __name__ == "__main__":
-    env_handler = EnvironmentHandler(env_type="FlappyBird")
-
-    # Run a random action loop
-    while True:
-        # Sample a random action
-        action = env_handler.env.action_space.sample()
-
-        # Step through the environment
-        obs, reward, terminated, _, info = env_handler.step(action)
-
-        # Check if the game is over
-        if terminated:
-            break
-
-    # Close the environment
-    env_handler.close()
+        self.env.close()

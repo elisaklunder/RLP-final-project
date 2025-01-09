@@ -1,7 +1,6 @@
 import random
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 # Optional: flappy bird support (if installed)
 import flappy_bird_gymnasium  # noqa: F401
@@ -20,39 +19,31 @@ class PPOConfig:
     seed: int = 1
     torch_deterministic: bool = True
     cuda: bool = True
-    track: bool = False
-    wandb_project_name: str = "cleanRL"
-    wandb_entity: Optional[str] = None
-    capture_video: bool = False
+    human_render: bool = False
 
     # Algorithm specific arguments
     env_id: str = "CartPole-v1"
-    total_timesteps: int = 500000
-    learning_rate: float = 2.5e-4
+    total_timesteps: int = 100_000
+    learning_rate: float = 0.0005
     num_envs: int = 4
-    num_steps: int = 128
-    anneal_lr: bool = True
-    gamma: float = 0.99
+    num_steps: int = 100
+    gamma: float = 0.95
     gae_lambda: float = 0.95
     num_minibatches: int = 4
-    update_epochs: int = 4
+    update_epochs: int = 10
     norm_adv: bool = True
     clip_coef: float = 0.2
-    clip_vloss: bool = True
-    ent_coef: float = 0.01
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
-    target_kl: Optional[float] = None
-
 
 class EnvironmentHandler:
     def __init__(
         self,
         env_id: str,
         num_envs: int = 1,
-        capture_video: bool = False,
         run_name: str = "experiment",
         seed: int = 42,
+        human_render: bool = False,
     ):
         """
         A handler that sets up and manages environments (including vectorized environments).
@@ -66,18 +57,17 @@ class EnvironmentHandler:
         """
         self.env_id = env_id
         self.num_envs = num_envs
-        self.capture_video = capture_video
         self.run_name = run_name
+        self.human_render = human_render
         self.seed = seed
         self.envs = self._make_vector_envs()
 
     def _make_env(self, env_id, idx):
         def thunk():
-            if self.capture_video and idx == 0:
-                env = gym.make(env_id, render_mode="rgb_array")
-                env = gym.wrappers.RecordVideo(env, f"videos/{self.run_name}")
+            if self.human_render:
+                env = gym.make(env_id, render_mode="human", use_lidar=False)
             else:
-                env = gym.make(env_id)
+                env = gym.make(env_id, use_lidar=False)
             env = gym.wrappers.RecordEpisodeStatistics(env)
             return env
 
@@ -140,7 +130,7 @@ class Agent(nn.Module):
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
+        return action, probs.log_prob(action), self.critic(x)
 
 
 class PPOTrainer:
@@ -159,31 +149,16 @@ class PPOTrainer:
 
         # Create the run name
         self.run_name = f"{self.config.env_id}__{self.config.exp_name}__{self.config.seed}__{int(time.time())}"
-
-        # Initialize tracking if needed
-        if self.config.track:
-            import wandb
-
-            wandb.init(
-                project=self.config.wandb_project_name,
-                entity=self.config.wandb_entity,
-                sync_tensorboard=True,
-                config=vars(self.config),
-                name=self.run_name,
-                monitor_gym=True,
-                save_code=True,
-            )
-
-        self.writer = SummaryWriter(f"runs/{self.run_name}")
+        self.writer = SummaryWriter(f"logs/tensorboard/{self.config.env_id}/{self.run_name}")
         self._write_hyperparams()
 
         # Setup environment
         self.env_handler = EnvironmentHandler(
             env_id=self.config.env_id,
             num_envs=self.config.num_envs,
-            capture_video=self.config.capture_video,
             run_name=self.run_name,
             seed=self.config.seed,
+            human_render=self.config.human_render,
         )
 
         # Check discrete action space
@@ -241,11 +216,6 @@ class PPOTrainer:
         next_done = torch.zeros(self.config.num_envs).to(self.device)
 
         for iteration in range(1, self.num_iterations + 1):
-            # Learning rate annealing
-            if self.config.anneal_lr:
-                frac = 1.0 - (iteration - 1.0) / self.num_iterations
-                lrnow = frac * self.config.learning_rate
-                self.optimizer.param_groups[0]["lr"] = lrnow
 
             # Temporary storages to compute mean and std error for episodes ended in this iteration
             iteration_episode_returns = []
@@ -257,7 +227,7 @@ class PPOTrainer:
                 self.dones[step] = next_done
 
                 with torch.no_grad():
-                    action, logprob, _, value = self.agent.get_action_and_value(
+                    action, logprob, value = self.agent.get_action_and_value(
                         next_obs
                     )
                     self.values[step] = value.flatten()
@@ -293,32 +263,17 @@ class PPOTrainer:
 
             # After updating, log mean and standard error of episodes ended in this iteration
             if len(iteration_episode_returns) > 0:
-                print(f"episode returns: {iteration_episode_returns}")
                 mean_return = np.mean(iteration_episode_returns)
-                std_return = np.std(iteration_episode_returns)
-                n_eps = len(iteration_episode_returns)
-                stderr_return = std_return / np.sqrt(n_eps)
-
                 mean_length = np.mean(iteration_episode_lengths)
-                std_length = np.std(iteration_episode_lengths)
-                stderr_length = std_length / np.sqrt(n_eps)
-
-                self.writer.add_scalar("episodic_return/mean", mean_return, global_step)
-                self.writer.add_scalar(
-                    "episodic_return/standard_error", stderr_return, global_step
-                )
-                self.writer.add_scalar("episodic_length/mean", mean_length, global_step)
-                self.writer.add_scalar(
-                    "episodic_length/standard_error", stderr_length, global_step
-                )
+                self.writer.add_scalar("rollout/ep_rew_mean", mean_return, global_step)
+                self.writer.add_scalar("rollout/ep_len_mean", mean_length, global_step)
 
     def _log_episode_return(self, global_step, info):
-        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
         self.writer.add_scalar(
-            "charts/episodic_return", info["episode"]["r"], global_step
+            "rollout/ep_rew_mean", info["episode"]["r"], global_step
         )
         self.writer.add_scalar(
-            "charts/episodic_length", info["episode"]["l"], global_step
+            "rollout/ep_len_mean", info["episode"]["l"], global_step
         )
 
     def _update(self, global_step, start_time, next_obs, next_done):
@@ -369,7 +324,7 @@ class PPOTrainer:
                 end = start + self.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = self.agent.get_action_and_value(
+                _, newlogprob, newvalue = self.agent.get_action_and_value(
                     b_obs[mb_inds], b_actions.long()[mb_inds]
                 )
                 logratio = newlogprob - b_logprobs[mb_inds]
@@ -400,25 +355,8 @@ class PPOTrainer:
 
                 # Value loss
                 newvalue = newvalue.view(-1)
-                if self.config.clip_vloss:
-                    v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
-                    v_clipped = b_values[mb_inds] + torch.clamp(
-                        newvalue - b_values[mb_inds],
-                        -self.config.clip_coef,
-                        self.config.clip_coef,
-                    )
-                    v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
-                    v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-                    v_loss = 0.5 * v_loss_max.mean()
-                else:
-                    v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
-
-                entropy_loss = entropy.mean()
-                loss = (
-                    pg_loss
-                    - self.config.ent_coef * entropy_loss
-                    + v_loss * self.config.vf_coef
-                )
+                v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
+                loss = (pg_loss + v_loss * self.config.vf_coef)
 
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -427,50 +365,61 @@ class PPOTrainer:
                 )
                 self.optimizer.step()
 
-            if self.config.target_kl is not None and approx_kl > self.config.target_kl:
-                break
-
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
         # Logging
-        self.writer.add_scalar(
-            "charts/learning_rate", self.optimizer.param_groups[0]["lr"], global_step
-        )
-        self.writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-        self.writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-        self.writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-        self.writer.add_scalar(
-            "losses/old_approx_kl", old_approx_kl.item(), global_step
-        )
-        self.writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-        self.writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-        self.writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        sps = int(global_step / (time.time() - start_time))
+        self.writer.add_scalar("train/value_loss", v_loss.item(), global_step)
+        self.writer.add_scalar("train/policy_gradient_loss", pg_loss.item(), global_step)
+        self.writer.add_scalar("train/clip_fraction", np.mean(clipfracs), global_step)
+        self.writer.add_scalar("train/explained_variance", explained_var, global_step)
 
-        self.writer.add_scalar("charts/steps_per_second", sps, global_step)
+    def save_model(self, path: str):
+        torch.save({
+            'agent_state_dict': self.agent.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'config': self.config,
+        }, path)
+        print(f"Model saved to {path}")
 
+    def load_model(self, path: str):
+        checkpoint = torch.load(path)
+        self.agent.load_state_dict(checkpoint['agent_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.config = checkpoint['config']
+        print(f"Model loaded from {path}")
+
+    def evaluate(self, num_episodes: int = 50):
+        # Create a single environment instead of a vectorized one
+        eval_env = gym.make(self.config.env_id, render_mode="human", use_lidar=False)
+        eval_env = gym.wrappers.RecordEpisodeStatistics(eval_env)
+        
+        for ep in range(num_episodes):
+            obs, _ = eval_env.reset()
+            terminated = truncated = False
+
+            while not (terminated or truncated):
+                obs_tensor = torch.Tensor(obs)
+                action, _, _ = self.agent.get_action_and_value(obs_tensor)  
+                action_value = action.numpy().item()
+                obs, reward, terminated, truncated, _ = eval_env.step(action_value)
+                    
+        eval_env.close()
 
 if __name__ == "__main__":
-    config = PPOConfig(total_timesteps=100_000)
-    trainer = PPOTrainer(config)
-    trainer.train()
-
-    # # Example usage of the environment handler with a different environment (like FlappyBird)
-    # # Please note that FlappyBird environment might not be vectorized, so we create a single env:
-    # env_handler = EnvironmentHandler(
-    #     env_id="FlappyBird-v0",
-    #     num_envs=1,
-    #     capture_video=False,
-    #     run_name="FlappyTest",
-    #     seed=42,
-    # )
-
-    # obs, _ = env_handler.reset()
-    # done = False
-    # while not done:
-    #     action = env_handler.envs.action_space.sample()
-    #     obs, reward, terminated, truncated, info = env_handler.step(action)
-    #     done = np.logical_or(terminated, truncated).any()
-    # env_handler.close()
+    # config = PPOConfig(total_timesteps=100_000, 
+    #                    env_id="FlappyBird-v0", 
+    #                    learning_rate=0.0005, 
+    #                    num_steps=100, 
+    #                    update_epochs=10, 
+    #                    gamma=0.95)
+                       
+    # trainer = PPOTrainer(config)
+    # trainer.train()
+    # trainer.save_model("logs/checkpoints/clean_ppo_model_flappybird.pth")
+    
+    config = PPOConfig(env_id="FlappyBird-v0", human_render=True)
+    trainer = PPOTrainer(config)   
+    trainer.load_model("logs/checkpoints/clean_ppo_model_flappybird.pth")
+    trainer.evaluate()
