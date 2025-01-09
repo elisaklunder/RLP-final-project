@@ -267,8 +267,6 @@ class PPOTrainer:
                 ratio = logratio.exp()
 
                 with torch.no_grad():
-                    old_approx_kl = (-logratio).mean()
-                    approx_kl = ((ratio - 1) - logratio).mean()
                     clipfracs += [
                         ((ratio - 1.0).abs() > self.config.clip_coef)
                         .float()
