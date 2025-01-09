@@ -1,8 +1,9 @@
-gymnasium
-flappy_bird_gymnasium
+swig
+gymnasium[box2d]==1.0.0
+flappy_bird_gymnasium==0.4.0
 matplotlib
-numpy
+numpy==1.26.4
 pandas
-stable-baselines3[extra]
-tensorflow
-torch
+stable-baselines3[extra]==2.4.1
+tensorflow==2.16.2
+torch==2.2.2

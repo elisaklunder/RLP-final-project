@@ -6,6 +6,8 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
+from agents.SB3_PPO_agent import PPOAgentSB
 from envs.environment_handler import EnvironmentHandler
 
 
@@ -34,10 +36,10 @@ class SaveTrainingMetricsCallback:
                     "ep_len_mean": ep_len_mean,
                 }
             )
-            if self.verbose:
-                print(
-                    f"Timesteps: {num_timesteps}, Reward: {ep_rew_mean:.2f}, Length: {ep_len_mean:.2f}"
-                )
+            # if self.verbose:
+            #     # print(
+            #     #     f"Timesteps: {num_timesteps}, Reward: {ep_rew_mean:.2f}, Length: {ep_len_mean:.2f}"
+            #     # )
 
     def on_training_end(self):
         """
@@ -51,11 +53,9 @@ class SaveTrainingMetricsCallback:
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_size=64):
         super(ActorCritic, self).__init__()
-        # Shared base layers
+
         self.base = self._init_base(state_dim, hidden_size)
-        # Actor head
         self.actor = self._init_actor(hidden_size, action_dim)
-        # Critic head
         self.critic = self._init_critic(hidden_size)
 
     def _init_base(self, state_dim, hidden_size):
@@ -127,7 +127,8 @@ def collect_trajectories(env_handler, policy_net, t_max, device):
 
             cumulative_reward = 0
             episode_length = 0
-            state, _ = env_handler.reset()
+            # state, _ = env_handler.reset()
+            break
         else:
             state = next_state
 
@@ -262,7 +263,8 @@ class PPOAgent:
                     trajectories["episode_lengths"],
                 )
 
-            print(f"Epoch {epoch + 1}/{num_epochs} completed.")
+            if (epoch + 1) % 500 == 0:
+                print(f"Epoch {epoch + 1}/{num_epochs} completed.")
 
         if callback is not None:
             callback.on_training_end()
@@ -282,6 +284,7 @@ class PPOAgent:
                 obs, reward, done, _, _ = self.env_handler.step(action)
                 episode_reward += reward
             rewards.append(episode_reward)
+
             print(f"Episode {episode + 1}: Reward = {episode_reward}")
         return rewards
 
@@ -294,12 +297,13 @@ class PPOAgent:
         print(f"Model loaded from {path}.")
 
 
-def plot_mean_episode_reward(log_path: str):
+def plot_mean_episode_reward(log_path: str, save_path: str = "mean_episode_reward.png"):
     """
-    Plot mean episode reward over timesteps from the training log.
+    Plot and save mean episode reward over timesteps from the training log.
 
     Args:
     - log_path: Path to the CSV file containing training metrics.
+    - save_path: Path to save the plot image.
     """
     # Load the training metrics
     data = pd.read_csv(log_path)
@@ -312,27 +316,36 @@ def plot_mean_episode_reward(log_path: str):
     plt.ylabel("Mean Episode Reward")
     plt.legend()
     plt.grid()
+    plt.savefig(save_path)
     plt.show()
+    print(f"Plot saved to {save_path}")
 
 
 if __name__ == "__main__":
     log_path = "training_metrics.csv"
 
-    env_handler = EnvironmentHandler(env_type="FlappyBird", human_render=True)
+    env_handler = EnvironmentHandler(env_type="FlappyBird", human_render=False)
     agent = PPOAgent(env_handler, device="cpu")
-    agent.load("ppo_flappy_bird.pth")
 
-    # agent.train(
-    #     num_epochs=100,
-    #     t_max=2048,  # after how many actions we update the policy
-    #     batch_size=64,
-    #     clip_epsilon=0.2,
-    #     log_path="training_metrics.csv",
-    # )
+    agent.train(
+        num_epochs=100000,
+        t_max=2048,  # after how many actions we update the policy
+        batch_size=64,
+        clip_epsilon=0.2,
+        log_path=log_path,
+    )
 
+    print("SB3 agent")
+    sb_agent = PPOAgentSB(env_handler, total_timesteps=1000)
+    sb_agent.train(learning_rate=3e-4, gamma=0.95)
+    agent.evaluate(episodes=20)
+    print("-" * 10)
+    sb_agent.evaluate(episodes=20)
+
+    env_handler.close()
     # Evaluate the trained agent
-    agent.evaluate(episodes=5)
 
     # Save the model
+    # agent.save("ppo_flappy_bird.pth")
 
-    plot_mean_episode_reward("training_metrics.csv")
+    plot_mean_episode_reward(log_path)
