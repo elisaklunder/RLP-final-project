@@ -263,7 +263,6 @@ class PPOAgent:
                     trajectories["episode_lengths"],
                 )
 
-
             if (epoch + 1) % 500 == 0:
                 print(f"Epoch {epoch + 1}/{num_epochs} completed.")
 

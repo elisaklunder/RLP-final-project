@@ -12,6 +12,8 @@ import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard.writer import SummaryWriter
 
+from envs.environment_handler import OurEnvironmentHandler
+
 
 @dataclass
 class PPOConfig:
@@ -35,67 +37,6 @@ class PPOConfig:
     clip_coef: float = 0.2
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
-
-class EnvironmentHandler:
-    def __init__(
-        self,
-        env_id: str,
-        num_envs: int = 1,
-        run_name: str = "experiment",
-        seed: int = 42,
-        human_render: bool = False,
-    ):
-        """
-        A handler that sets up and manages environments (including vectorized environments).
-
-        Args:
-            env_id (str): Gymnasium environment ID.
-            num_envs (int): Number of parallel environments.
-            capture_video (bool): Whether to record video from the first environment.
-            run_name (str): Run name for video logging.
-            seed (int): Environment seed.
-        """
-        self.env_id = env_id
-        self.num_envs = num_envs
-        self.run_name = run_name
-        self.human_render = human_render
-        self.seed = seed
-        self.envs = self._make_vector_envs()
-
-    def _make_env(self, env_id, idx):
-        def thunk():
-            if self.human_render:
-                env = gym.make(env_id, render_mode="human", use_lidar=False)
-            else:
-                env = gym.make(env_id, use_lidar=False)
-            env = gym.wrappers.RecordEpisodeStatistics(env)
-            return env
-
-        return thunk
-
-    def _make_vector_envs(self):
-        envs = gym.vector.SyncVectorEnv(
-            [self._make_env(self.env_id, i) for i in range(self.num_envs)]
-        )
-        envs.reset(seed=self.seed)
-        return envs
-
-    def reset(self):
-        return self.envs.reset(seed=self.seed)
-
-    def step(self, actions: np.ndarray):
-        return self.envs.step(actions)
-
-    def close(self):
-        self.envs.close()
-
-    @property
-    def single_observation_space(self):
-        return self.envs.single_observation_space
-
-    @property
-    def single_action_space(self):
-        return self.envs.single_action_space
 
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
@@ -149,11 +90,13 @@ class PPOTrainer:
 
         # Create the run name
         self.run_name = f"{self.config.env_id}__{self.config.exp_name}__{self.config.seed}__{int(time.time())}"
-        self.writer = SummaryWriter(f"logs/tensorboard/{self.config.env_id}/{self.run_name}")
+        self.writer = SummaryWriter(
+            f"runs/OUR_PPO_{self.config.env_id}/{self.run_name}"
+        )
         self._write_hyperparams()
 
         # Setup environment
-        self.env_handler = EnvironmentHandler(
+        self.env_handler = OurEnvironmentHandler(
             env_id=self.config.env_id,
             num_envs=self.config.num_envs,
             run_name=self.run_name,
@@ -216,7 +159,6 @@ class PPOTrainer:
         next_done = torch.zeros(self.config.num_envs).to(self.device)
 
         for iteration in range(1, self.num_iterations + 1):
-
             # Temporary storages to compute mean and std error for episodes ended in this iteration
             iteration_episode_returns = []
             iteration_episode_lengths = []
@@ -227,9 +169,7 @@ class PPOTrainer:
                 self.dones[step] = next_done
 
                 with torch.no_grad():
-                    action, logprob, value = self.agent.get_action_and_value(
-                        next_obs
-                    )
+                    action, logprob, value = self.agent.get_action_and_value(next_obs)
                     self.values[step] = value.flatten()
 
                 self.actions[step] = action
@@ -253,7 +193,7 @@ class PPOTrainer:
                         # Get returns and lengths for completed episodes
                         returns = infos["episode"]["r"][completed_episodes]
                         lengths = infos["episode"]["l"][completed_episodes]
-                        
+
                         # Add to iteration storage
                         iteration_episode_returns.extend(returns.tolist())
                         iteration_episode_lengths.extend(lengths.tolist())
@@ -269,12 +209,8 @@ class PPOTrainer:
                 self.writer.add_scalar("rollout/ep_len_mean", mean_length, global_step)
 
     def _log_episode_return(self, global_step, info):
-        self.writer.add_scalar(
-            "rollout/ep_rew_mean", info["episode"]["r"], global_step
-        )
-        self.writer.add_scalar(
-            "rollout/ep_len_mean", info["episode"]["l"], global_step
-        )
+        self.writer.add_scalar("rollout/ep_rew_mean", info["episode"]["r"], global_step)
+        self.writer.add_scalar("rollout/ep_len_mean", info["episode"]["l"], global_step)
 
     def _update(self, global_step, start_time, next_obs, next_done):
         # Bootstrap value
@@ -350,13 +286,13 @@ class PPOTrainer:
                 pg_loss1 = -mb_advantages * ratio
                 pg_loss2 = -mb_advantages * torch.clamp(
                     ratio, 1 - self.config.clip_coef, 1 + self.config.clip_coef
-                ) # OUR MODIFICATION GOES HERE
+                )  # OUR MODIFICATION GOES HERE
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
                 # Value loss
                 newvalue = newvalue.view(-1)
                 v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
-                loss = (pg_loss + v_loss * self.config.vf_coef)
+                loss = pg_loss + v_loss * self.config.vf_coef
 
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -371,55 +307,63 @@ class PPOTrainer:
 
         # Logging
         self.writer.add_scalar("train/value_loss", v_loss.item(), global_step)
-        self.writer.add_scalar("train/policy_gradient_loss", pg_loss.item(), global_step)
+        self.writer.add_scalar(
+            "train/policy_gradient_loss", pg_loss.item(), global_step
+        )
         self.writer.add_scalar("train/clip_fraction", np.mean(clipfracs), global_step)
         self.writer.add_scalar("train/explained_variance", explained_var, global_step)
 
     def save_model(self, path: str):
-        torch.save({
-            'agent_state_dict': self.agent.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'config': self.config,
-        }, path)
+        torch.save(
+            {
+                "agent_state_dict": self.agent.state_dict(),
+                "optimizer_state_dict": self.optimizer.state_dict(),
+                "config": self.config,
+            },
+            path,
+        )
         print(f"Model saved to {path}")
 
     def load_model(self, path: str):
         checkpoint = torch.load(path)
-        self.agent.load_state_dict(checkpoint['agent_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        self.config = checkpoint['config']
+        self.agent.load_state_dict(checkpoint["agent_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.config = checkpoint["config"]
         print(f"Model loaded from {path}")
 
     def evaluate(self, num_episodes: int = 50):
         # Create a single environment instead of a vectorized one
         eval_env = gym.make(self.config.env_id, render_mode="human", use_lidar=False)
         eval_env = gym.wrappers.RecordEpisodeStatistics(eval_env)
-        
+
         for ep in range(num_episodes):
             obs, _ = eval_env.reset()
             terminated = truncated = False
 
             while not (terminated or truncated):
                 obs_tensor = torch.Tensor(obs)
-                action, _, _ = self.agent.get_action_and_value(obs_tensor)  
+                action, _, _ = self.agent.get_action_and_value(obs_tensor)
                 action_value = action.numpy().item()
                 obs, reward, terminated, truncated, _ = eval_env.step(action_value)
-                    
+
         eval_env.close()
 
+
 if __name__ == "__main__":
-    # config = PPOConfig(total_timesteps=100_000, 
-    #                    env_id="FlappyBird-v0", 
-    #                    learning_rate=0.0005, 
-    #                    num_steps=100, 
-    #                    update_epochs=10, 
-    #                    gamma=0.95)
-                       
-    # trainer = PPOTrainer(config)
-    # trainer.train()
+    config = PPOConfig(
+        total_timesteps=100_000,
+        env_id="CartPole-v1",
+        learning_rate=0.0005,
+        num_steps=100,
+        update_epochs=10,
+        gamma=0.95,
+    )
+
+    trainer = PPOTrainer(config)
+    trainer.train()
     # trainer.save_model("logs/checkpoints/clean_ppo_model_flappybird.pth")
-    
-    config = PPOConfig(env_id="FlappyBird-v0", human_render=True)
-    trainer = PPOTrainer(config)   
-    trainer.load_model("logs/checkpoints/clean_ppo_model_flappybird.pth")
-    trainer.evaluate()
+
+    # config = PPOConfig(env_id="FlappyBird-v0", human_render=True)
+    # trainer = PPOTrainer(config)
+    # trainer.load_model("logs/checkpoints/clean_ppo_model_flappybird.pth")
+    # trainer.evaluate()

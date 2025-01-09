@@ -1,16 +1,18 @@
-import flappy_bird_gymnasium  # Add this at the top of the file
-from stable_baselines3 import PPO
-from agents.PPO_logs_handler import SaveTrainingMetricsCallback
-from envs.environment_handler import EnvironmentHandler
 from dataclasses import dataclass
+
+from PPO_logs_handler import SaveTrainingMetricsCallback
+from stable_baselines3 import PPO
+
+from envs.environment_handler import SB3EnvironmentHandler
+
 
 @dataclass
 class PPOConfig:
     human_render: bool = False
-    env_id: str = "FlappyBird-v0"
+    env_id: str = "CartPole-v1"
     total_timesteps: int = 100_000
     learning_rate: float = 0.0005
-    num_envs: int = 4
+    num_envs: int = 1
     num_steps: int = 100
     gamma: float = 0.95
     gae_lambda: float = 0.95
@@ -23,7 +25,7 @@ class PPOConfig:
 
 
 class PPOAgentSB:
-    def __init__(self, env_handler):
+    def __init__(self, env_handler: SB3EnvironmentHandler):
         self.env_handler = env_handler
         self.model = None
 
@@ -32,27 +34,23 @@ class PPOAgentSB:
         config: PPOConfig,
         verbose: int = 1,
         log_path: str = None,
-        log_to_tensorboard: str = "logs/tensorboard",
     ):
-        log_to_tensorboard = f"{log_to_tensorboard}/{self.env_handler.env_type}"
         self.model = PPO(
             "MlpPolicy",
             self.env_handler.env,
             learning_rate=config.learning_rate,
             gamma=config.gamma,
-
             # !! batch size is the number of steps times the number of environments divided by the number of minibatches
-            batch_size=(config.num_steps * config.num_envs)// config.num_minibatches, 
-
+            batch_size=(config.num_steps * config.num_envs) // config.num_minibatches,
             n_steps=config.num_steps,
             n_epochs=config.update_epochs,
             vf_coef=config.vf_coef,
             max_grad_norm=config.max_grad_norm,
             clip_range=config.clip_coef,
-            gae_lambda=config.gae_lambda,         
+            gae_lambda=config.gae_lambda,
             normalize_advantage=config.norm_adv,
             verbose=verbose,
-            tensorboard_log=log_to_tensorboard,
+            tensorboard_log=f"runs/SB3_PPO_{config.env_id}",
         )
         if log_path:
             callback = SaveTrainingMetricsCallback(log_path=log_path)
@@ -88,19 +86,20 @@ class PPOAgentSB:
 
 if __name__ == "__main__":
     config = PPOConfig()
-    env_handler = EnvironmentHandler(
-        env_type=config.env_id, 
-        human_render=config.human_render, 
-        num_envs=config.num_envs
+
+    env_handler = SB3EnvironmentHandler(
+        env_type=config.env_id,
+        human_render=config.human_render,
+        num_envs=config.num_envs,
     )
 
     agent = PPOAgentSB(
-        env_handler=env_handler, 
+        env_handler=env_handler,
     )
 
     agent.train(
         config=config,
-        verbose=1,
+        verbose=0,
     )
 
     env_handler.close()
