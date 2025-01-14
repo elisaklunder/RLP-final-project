@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from agents.SB3_PPO_agent import PPOAgentSB
+from agents.SB3_ppo import PPOAgentSB
 from envs.environment_handler import EnvironmentHandler
 from utils.plot import plot_training_metrics_with_sem
 

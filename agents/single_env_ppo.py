@@ -8,6 +8,8 @@ import numpy as np
 from collections import deque
 from typing import Tuple, List
 import csv
+from torch.utils.tensorboard.writer import SummaryWriter
+
 torch.manual_seed(0)
 
 class ActorCritic(nn.Module):

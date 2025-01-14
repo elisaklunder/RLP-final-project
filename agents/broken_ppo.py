@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from agents.SB3_PPO_agent import PPOAgentSB
+from agents.SB3_ppo import PPOAgentSB
 from envs.environment_handler import EnvironmentHandler
 
 

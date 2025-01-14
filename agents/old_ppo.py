@@ -25,14 +25,14 @@ class PPOConfig:
 
     # Algorithm specific arguments
     env_id: str = "CartPole-v1"
-    total_timesteps: int = 100_000
+    total_timesteps: int = 2**17
     learning_rate: float = 0.0005
     num_envs: int = 4
-    num_steps: int = 100
+    num_steps: int = 1024
     gamma: float = 0.95
     gae_lambda: float = 0.95
     num_minibatches: int = 4
-    update_epochs: int = 10
+    update_epochs: int = 128
     norm_adv: bool = True
     clip_coef: float = 0.2
     vf_coef: float = 0.5

@@ -1,10 +1,49 @@
 from dataclasses import dataclass
 
-from PPO_logs_handler import SaveTrainingMetricsCallback
+import numpy as np
+import pandas as pd
+
 from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import BaseCallback
 
 from envs.environment_handler import SB3EnvironmentHandler
 
+
+class SaveTrainingMetricsCallback(BaseCallback):
+    """
+    Custom callback for saving training metrics to a CSV file and generating plots.
+    """
+
+    def __init__(self, log_path: str = None, verbose: int = 1):
+        super(SaveTrainingMetricsCallback, self).__init__(verbose)
+        self.log_path = log_path
+        self.metrics = []
+
+    def _on_step(self) -> bool:
+        """
+        Called at every step during training.
+        """
+        if len(self.model.ep_info_buffer) > 0:
+            ep_rewards = [ep_info["r"] for ep_info in self.model.ep_info_buffer]
+            ep_lengths = [ep_info["l"] for ep_info in self.model.ep_info_buffer]
+            ep_rew_mean = np.mean(ep_rewards)
+            ep_len_mean = np.mean(ep_lengths)
+
+            self.metrics.append(
+                {
+                    "timesteps": self.num_timesteps,
+                    "ep_rew_mean": ep_rew_mean,
+                    "ep_len_mean": ep_len_mean,
+                }
+            )
+        return True
+
+    def _on_training_end(self) -> None:
+        """
+        Called at the end of training to save the metrics to a CSV file.
+        """
+        pd.DataFrame(self.metrics).to_csv(self.log_path, index=False)
+        print(f"Training metrics saved to {self.log_path}")
 
 @dataclass
 class PPOConfig:
@@ -13,11 +52,11 @@ class PPOConfig:
     total_timesteps: int = 100_000
     learning_rate: float = 0.0005
     num_envs: int = 1
-    num_steps: int = 100
+    num_steps: int = 1024
     gamma: float = 0.95
     gae_lambda: float = 0.95
     num_minibatches: int = 4
-    update_epochs: int = 10
+    update_epochs: int = 128
     norm_adv: bool = True
     clip_coef: float = 0.2
     vf_coef: float = 0.5
