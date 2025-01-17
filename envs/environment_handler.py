@@ -1,6 +1,9 @@
 import gymnasium as gym
 import numpy as np
 from stable_baselines3.common.env_util import make_vec_env
+from gymnasium.vector import AsyncVectorEnv
+from gymnasium.wrappers import TimeLimit
+from trading_env import download_dataset, make_features
 
 
 class SB3EnvironmentHandler:
@@ -23,11 +26,12 @@ class SB3EnvironmentHandler:
 class OurEnvironmentHandler:
     def __init__(
         self,
-        env_id: str,
+        env_id: str = "FlappyBird-v0",
         num_envs: int = 1,
         run_name: str = "experiment",
-        seed: int = 42,
-        human_render: bool = False,
+        #seed: int = 42,
+        human_render: str | None = None,
+        max_steps_per_episode: int = 1000,
     ):
         """
         A handler that sets up and manages environments (including vectorized environments).
@@ -43,35 +47,49 @@ class OurEnvironmentHandler:
         self.num_envs = num_envs
         self.run_name = run_name
         self.human_render = human_render
-        self.seed = seed
+        #self.seed = seed
+        self.max_steps_per_episode = max_steps_per_episode
         self.envs = self._make_vector_envs()
+        
+    def _make_env(self, seed):
+        """
+        Returns a function that, when called, creates a single Flappy Bird environment with a step limit.
+        """
 
-    def _make_env(self, env_id, idx):
-        def thunk():
+        def _init():
             if self.env_id == "FlappyBird-v0":
-                if self.human_render:
-                    env = gym.make(env_id, render_mode="human", use_lidar=False)
-                else:
-                    env = gym.make(env_id, use_lidar=False)
+                env = gym.make(self.env_id, use_lidar=False, render_mode=self.human_render)
+            elif self.env_id == "TradingEnv":
+                df = make_features(download_dataset())
+                env = gym.make(self.env_id, name= "BTCUSD", df = df, positions=[-1, -0.5, 0, 0.5, 1], trading_fees=0.01 / 100,   borrow_interest_rate=0.0003
+        / 100, render_mode=self.human_render)
             else:
-                if self.human_render:
-                    env = gym.make(env_id, render_mode="human")
-                else:
-                    env = gym.make(env_id)
-            env = gym.wrappers.RecordEpisodeStatistics(env)
+                env = gym.make(self.env_id)
+            env = TimeLimit(env, max_episode_steps=self.max_steps_per_episode)
+
+            self.action_dim = env.action_space.n
+            self.state_dim = env.observation_space.shape[0]
+
+            #this was in the previous env handler version, but i dont know what it is
+            # env = gym.wrappers.RecordEpisodeStatistics(env)
+            env.reset(seed=seed)
             return env
+        
 
-        return thunk
-
+        return _init
+    
     def _make_vector_envs(self):
-        envs = gym.vector.SyncVectorEnv(
-            [self._make_env(self.env_id, i) for i in range(self.num_envs)]
-        )
-        envs.reset(seed=self.seed)
+        """Sets up the vectorized environments and initializes the agent."""
+
+        envs = AsyncVectorEnv([self._make_env(seed=i) for i in range(self.num_envs)])
+        self.envs = envs
         return envs
+        
+        # self.agent = Agent(state_dim, action_dim, self.params)
+
 
     def reset(self):
-        return self.envs.reset(seed=self.seed)
+        return self.envs.reset()
 
     def step(self, actions: np.ndarray):
         return self.envs.step(actions)
@@ -87,14 +105,3 @@ class OurEnvironmentHandler:
     def single_action_space(self):
         return self.envs.single_action_space
     
-
-        """Sets up the vectorized environments and initializes the agent."""
-
-        envs = AsyncVectorEnv([make_vectorized_env() for _ in range(NUM_ENVS)])
-        dummy_env = gym.make(self.env_name, use_lidar=False)
-        state_dim = dummy_env.observation_space.shape[0]
-        action_dim = dummy_env.action_space.n
-        dummy_env.close()
-
-        self.envs = envs
-        self.agent = Agent(state_dim, action_dim, self.params)
