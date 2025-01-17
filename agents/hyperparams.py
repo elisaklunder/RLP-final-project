@@ -625,51 +625,21 @@ class HyperparameterTuner:
 
 if __name__ == "__main__":
     hyperparams = [
-        {"modification": True, "max_modification": 0.1, "decay_modification": 2},
-        {
-            "modification": True,
-            "max_modification": 0.1,
-            "decay_modification": 2,
-            "min_modification": 0.01,
-        },
-        {
-            "modification": True,
-            "max_modification": 0.1,
-            "decay_modification": 2,
-            "min_modification": 0.005,
-        },
+        # {"modification": True, "max_modification": 0.1, "decay_modification": 2},
+        {"modification": True, "max_modification": 0.1, "decay_modification": 2, "min_modification": 0.01},
+        # {"modification": True, "max_modification": 0.1, "decay_modification": 2, "min_modification": 0.005},
         
         
         
-        {"modification": True, "max_modification": 0.1, "decay_modification": 1.5},
-        {
-            "modification": True,
-            "max_modification": 0.1,
-            "decay_modification": 1.5,
-            "min_modification": 0.01,
-        },
-        {
-            "modification": True,
-            "max_modification": 0.1,
-            "decay_modification": 1.5,
-            "min_modification": 0.005,
-        },
+        # {"modification": True, "max_modification": 0.1, "decay_modification": 1.5},
+        # {"modification": True, "max_modification": 0.1, "decay_modification": 1.5, "min_modification": 0.01},
+        # {"modification": True, "max_modification": 0.1, "decay_modification": 1.5, "min_modification": 0.005},
         
         
         
-        {"modification": True, "max_modification": 0.08, "decay_modification": 0.5},
-        {
-            "modification": True,
-            "max_modification": 0.08,
-            "decay_modification": 0.5,
-            "min_modification": 0.01,
-        },
-        {
-            "modification": True,
-            "max_modification": 0.08,
-            "decay_modification": 0.5,
-            "min_modification": 0.005,
-        },
+        # {"modification": True, "max_modification": 0.08, "decay_modification": 0.5},
+        # {"modification": True,"max_modification": 0.08,"decay_modification": 0.5,"min_modification": 0.01,},
+        # {"modification": True,"max_modification": 0.08,"decay_modification": 0.5,"min_modification": 0.005},
     ]
     tuner = HyperparameterTuner(env_name="FlappyBird-v0", runs=3)
     tuner.tune(hyperparams)
