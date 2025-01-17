@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --time=00:10:00
-#SBATCH --job-name=cpu_job
+#SBATCH --time=01:40:00
+#SBATCH --job-name=hyperparam
 #SBATCH --mem=8000
 
 module purge
