@@ -602,11 +602,9 @@ class HyperparameterTuner:
 
 if __name__ == "__main__":
     hyperparams = [
-        {"modification": False},     
-        {"modification": False, "leaky": True},
-        {"modification": True, "max_modification": 0.08, "decay_modification": 0.5},  
-        {"modification": True, "max_modification": 0.1, "decay_modification": 2},
-        {"modification": True, "max_modification": 0.2, "decay_modification": 3},
+        {"modification": True, "max_modification": 0.05, "decay_modification": 0.5},  
+        {"modification": True, "max_modification": 0.05, "decay_modification": 1},
+        {"modification": True, "max_modification": 0.05, "decay_modification": 2},
     ]
     tuner = HyperparameterTuner(env_name="FlappyBird-v0", runs=3)
     tuner.tune(hyperparams)
@@ -617,4 +615,4 @@ if __name__ == "__main__":
     #     "results_gamma_0_99_lr_0_001_mod.csv",
     # ]
     # tuner.results = tuner.read_results_from_csv(csv_files)
-    tuner.plot_results("modification_vs_leaky_vs_standard")
+    tuner.plot_results("modification_low_start")
