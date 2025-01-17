@@ -31,7 +31,7 @@ CLIP_COEF: float = 0.2
 VF_COEF: float = 0.5
 ENT_COEF: float = 0.01
 GRAD_NORM: float = 0.5
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MAX_STEPS_PER_EPISODE = 1000
 MODIFICATION = True
 MIN_MODIFICATION = 0
@@ -39,20 +39,19 @@ MAX_MODIFICATION = 0.08
 DECAY_MODIFICATION = 1
 STANDARD_LEAKY = False
 
-#hyperparams
+# hyperparams
 
 
-
-def make_vectorized_env(seed: int):
+def make_vectorized_env():
     """
     Returns a function that, when called, creates a single Flappy Bird environment with a step limit.
     """
 
     def _init():
         if ENV_NAME == "FlappyBird-v0":
-            env = gym.make(ENV_NAME, use_lidar=False, seed=seed)
+            env = gym.make(ENV_NAME, use_lidar=False)
         else:
-            env = gym.make(ENV_NAME, seed=seed)
+            env = gym.make(ENV_NAME)
         env = TimeLimit(env, max_episode_steps=MAX_STEPS_PER_EPISODE)
         return env
 
@@ -329,7 +328,7 @@ class Trainer:
     def setup_environment(self):
         """Sets up the vectorized environments and initializes the agent."""
 
-        envs = AsyncVectorEnv([make_vectorized_env(seed=i) for i in range(NUM_ENVS)])
+        envs = AsyncVectorEnv([make_vectorized_env() for _ in range(NUM_ENVS)])
         dummy_env = gym.make(self.env_name, use_lidar=False)
         state_dim = dummy_env.observation_space.shape[0]
         action_dim = dummy_env.action_space.n
@@ -627,18 +626,50 @@ class HyperparameterTuner:
 if __name__ == "__main__":
     hyperparams = [
         {"modification": True, "max_modification": 0.1, "decay_modification": 2},
-        {"modification": True, "max_modification": 0.1, "decay_modification": 2, "min_modification": 0.01},
-        {"modification": True, "max_modification": 0.1, "decay_modification": 2, "min_modification": 0.005},
+        {
+            "modification": True,
+            "max_modification": 0.1,
+            "decay_modification": 2,
+            "min_modification": 0.01,
+        },
+        {
+            "modification": True,
+            "max_modification": 0.1,
+            "decay_modification": 2,
+            "min_modification": 0.005,
+        },
+        
         
         
         {"modification": True, "max_modification": 0.1, "decay_modification": 1.5},
-        {"modification": True, "max_modification": 0.1, "decay_modification": 1.5, "min_modification": 0.01},
-        {"modification": True, "max_modification": 0.1, "decay_modification": 1.5, "min_modification": 0.005},
+        {
+            "modification": True,
+            "max_modification": 0.1,
+            "decay_modification": 1.5,
+            "min_modification": 0.01,
+        },
+        {
+            "modification": True,
+            "max_modification": 0.1,
+            "decay_modification": 1.5,
+            "min_modification": 0.005,
+        },
+        
+        
         
         {"modification": True, "max_modification": 0.08, "decay_modification": 0.5},
-        {"modification": True, "max_modification": 0.08, "decay_modification": 0.5, "min_modification": 0.01},
-        {"modification": True, "max_modification": 0.08, "decay_modification": 0.5, "min_modification": 0.005},
-        
+        {
+            "modification": True,
+            "max_modification": 0.08,
+            "decay_modification": 0.5,
+            "min_modification": 0.01,
+        },
+        {
+            "modification": True,
+            "max_modification": 0.08,
+            "decay_modification": 0.5,
+            "min_modification": 0.005,
+        },
     ]
     tuner = HyperparameterTuner(env_name="FlappyBird-v0", runs=3)
     tuner.tune(hyperparams)
