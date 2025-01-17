@@ -63,7 +63,6 @@ env = gym.make("TradingEnv",
     )
 
 
-
 model = PPO(
     "MlpPolicy",
     env,

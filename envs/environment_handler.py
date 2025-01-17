@@ -86,3 +86,15 @@ class OurEnvironmentHandler:
     @property
     def single_action_space(self):
         return self.envs.single_action_space
+    
+
+        """Sets up the vectorized environments and initializes the agent."""
+
+        envs = AsyncVectorEnv([make_vectorized_env() for _ in range(NUM_ENVS)])
+        dummy_env = gym.make(self.env_name, use_lidar=False)
+        state_dim = dummy_env.observation_space.shape[0]
+        action_dim = dummy_env.action_space.n
+        dummy_env.close()
+
+        self.envs = envs
+        self.agent = Agent(state_dim, action_dim, self.params)
