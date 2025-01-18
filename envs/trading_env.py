@@ -111,7 +111,7 @@ def make_features(df):
 
 if __name__ == "__main__":
     df = download_dataset()
-    make_features(df)
+    df = make_features(df)
 
     env = gym.make(
         "TradingEnv",

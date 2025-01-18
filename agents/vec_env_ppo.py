@@ -39,17 +39,19 @@ MAX_MODIFICATION = 0.08
 DECAY_MODIFICATION = 1
 STANDARD_LEAKY = False
 
+# hyperparams
 
-def make_vectorized_env(seed: int):
+
+def make_vectorized_env():
     """
     Returns a function that, when called, creates a single Flappy Bird environment with a step limit.
     """
 
     def _init():
         if ENV_NAME == "FlappyBird-v0":
-            env = gym.make(ENV_NAME, use_lidar=False, seed=seed)
+            env = gym.make(ENV_NAME, use_lidar=False)
         else:
-            env = gym.make(ENV_NAME, seed=seed)
+            env = gym.make(ENV_NAME)
         env = TimeLimit(env, max_episode_steps=MAX_STEPS_PER_EPISODE)
         return env
 
@@ -246,11 +248,11 @@ class Agent:
                     decay_coeff = 0.01
                 else:
                     decay_coeff = max(
-                        self.min_modification,
-                        self.max_modification
-                        - (self.max_modification - self.min_modification)
+                        self.minmod,
+                        self.maxmod
+                        - (self.maxmod - self.minmod)
                         * (
-                            self.decay_modification
+                            self.decaymod
                             * global_step
                             / (EPOCHS * NUM_ENVS * ROLLOUT_STEPS)
                         ),
@@ -313,9 +315,9 @@ class Trainer:
             "modification": False,
             "env_name": "FlappyBird-v0",
             "leaky": False,
-            "min_modification": 0,
-            "max_modification": 0.08,
-            "decay_modification": 1,
+            "minmod": 0,
+            "maxmod": 0.08,
+            "decaymod": 1,
         }
 
         self.params = {**self.defaults, **hyperparams}
@@ -326,7 +328,7 @@ class Trainer:
     def setup_environment(self):
         """Sets up the vectorized environments and initializes the agent."""
 
-        envs = AsyncVectorEnv([make_vectorized_env(seed=i) for i in range(NUM_ENVS)])
+        envs = AsyncVectorEnv([make_vectorized_env() for _ in range(NUM_ENVS)])
         dummy_env = gym.make(self.env_name, use_lidar=False)
         state_dim = dummy_env.observation_space.shape[0]
         action_dim = dummy_env.action_space.n
@@ -457,43 +459,101 @@ class HyperparameterTuner:
             self.results[label] = stats
 
     @staticmethod
-    def read_results_from_csv(csv_files: List[str]) -> Dict[str, Dict[str, np.ndarray]]:
-        """
-        Reads the results from the given CSV files and aggregates them.
-        Args:
-            csv_files: List of CSV file paths containing the results.
-        Returns:
-            A dictionary where each key is a hyperparameter label, and the value contains
-            mean and standard deviation of episode lengths and returns.
-        """
-        results = {}
+    def merge_separate_numbers(parts: List[str]) -> List[str]:
+        merged = []
+        skip_next = False
 
+        def is_all_digits(s: str) -> bool:
+            return all(ch.isdigit() for ch in s)
+
+        for i in range(len(parts)):
+            if skip_next:
+                skip_next = False
+                continue
+            if (
+                i + 1 < len(parts)
+                and is_all_digits(parts[i])
+                and is_all_digits(parts[i + 1])
+            ):
+                merged.append(parts[i] + "_" + parts[i + 1])
+                skip_next = True
+            else:
+                merged.append(parts[i])
+        return merged
+
+    def read_results_from_csv(
+        self, csv_files: List[str]
+    ) -> Dict[str, Dict[str, np.ndarray]]:
+        """
+        Reads the results from the given CSV files and aggregates them,
+        creating nicer labels for well-known hyperparameters.
+        Any unknown tokens will simply be appended as-is (e.g. 'modification' -> 'modification').
+        Returns a dict mapping from the parsed label to another dict containing mean/std for lengths and returns.
+        """
+        KEY_MAPPING = {
+            "gamma": "γ",
+            "lr": "LR",
+            "maxmod": "α(max)",
+            "minmod": "α(min)",
+            "decaymod": "k",
+            "leaky": "leaky",
+            "mod": "mod",
+        }
+
+        def combine_numeric_parts(*parts: str) -> str:
+            joined = ".".join(parts)
+            as_float = float(joined)
+            return f"{as_float:g}"
+
+        def is_all_digits(s: str) -> bool:
+            return all(ch.isdigit() for ch in s)
+
+        results = {}
         for csv_file in csv_files:
             data = pd.read_csv(csv_file)
-
             base_name = os.path.splitext(os.path.basename(csv_file))[0]
-            parts = base_name.split("_")[1:]  # Skip 'results_'
 
-            label_parts = []
-            i = 0
-            while i < len(parts):
-                if (
-                    i + 1 < len(parts)
-                    and parts[i + 1]
-                    .replace("_", ".")
-                    .replace("-", "")
-                    .replace("e", "")
-                    .isnumeric()
-                ):
-                    value = parts[i + 1].replace("_", ".")
-                    label_parts.append(f"{parts[i]}={value}")
-                    i += 2
-                else:
-                    # Part is a boolean flag
-                    label_parts.append(parts[i])
-                    i += 1
+            parts = base_name.split("_")[1:]
 
-            label = ", ".join(label_parts)
+            if not parts or (len(parts) == 1 and not parts[0]):
+                label = "standard ppo"
+            else:
+                parts = self.merge_separate_numbers(parts)
+
+                label_parts = []
+                i = 0
+                while i < len(parts):
+                    token = parts[i]
+                    if token in KEY_MAPPING:
+                        display_key = KEY_MAPPING[token]
+
+                        if i + 1 < len(parts):
+                            next_token = parts[i + 1]
+                            if "_" in next_token:
+                                subparts = next_token.split("_")
+                                if all(is_all_digits(sp) for sp in subparts):
+                                    numeric_str = combine_numeric_parts(*subparts)
+                                    label_parts.append(f"{display_key}={numeric_str}")
+                                    i += 2
+                                    continue
+                            if is_all_digits(next_token):
+                                label_parts.append(f"{display_key}={next_token}")
+                                i += 2
+                                continue
+                        label_parts.append(display_key)
+                        i += 1
+                    else:
+                        if "_" in token:
+                            subparts = token.split("_")
+                            if all(is_all_digits(sp) for sp in subparts):
+                                numeric_str = combine_numeric_parts(*subparts)
+                                label_parts.append(numeric_str)
+                                i += 1
+                                continue
+                        label_parts.append(token)
+                        i += 1
+
+                label = ", ".join(label_parts)
 
             grouped = data.groupby("Update")
             mean_lengths = grouped["Episode_Length"].mean().values
@@ -534,14 +594,11 @@ class HyperparameterTuner:
 
         os.makedirs(save_folder, exist_ok=True)
 
-        # Plot episode lengths
         plt.figure(figsize=(10, 6))
         for label, data in self.results.items():
-            # Calculate original timesteps
             updates = len(data["mean_lengths"])
             timesteps = np.arange(updates) * ROLLOUT_STEPS * NUM_ENVS
 
-            # Apply smoothing
             smoothed_mean_lengths = self.smooth_data(
                 data["mean_lengths"], smoothing_window
             )
@@ -549,11 +606,9 @@ class HyperparameterTuner:
                 data["std_lengths"], smoothing_window
             )
 
-            # Adjust timesteps to match smoothed data length
             pad = (smoothing_window - 1) // 2
             smoothed_timesteps = timesteps[pad : -(pad + 1) if pad > 0 else None]
 
-            # Ensure all arrays have the same length
             min_len = min(len(smoothed_timesteps), len(smoothed_mean_lengths))
             smoothed_timesteps = smoothed_timesteps[:min_len]
             smoothed_mean_lengths = smoothed_mean_lengths[:min_len]
@@ -576,14 +631,11 @@ class HyperparameterTuner:
         plt.savefig(plot_path_lengths)
         plt.close()
 
-        # Plot episode returns
         plt.figure(figsize=(10, 6))
         for label, data in self.results.items():
-            # Calculate original timesteps
             updates = len(data["mean_returns"])
             timesteps = np.arange(updates) * ROLLOUT_STEPS * NUM_ENVS
 
-            # Apply smoothing
             smoothed_mean_returns = self.smooth_data(
                 data["mean_returns"], smoothing_window
             )
@@ -591,11 +643,9 @@ class HyperparameterTuner:
                 data["std_returns"], smoothing_window
             )
 
-            # Adjust timesteps to match smoothed data length
             pad = (smoothing_window - 1) // 2
             smoothed_timesteps = timesteps[pad : -(pad + 1) if pad > 0 else None]
 
-            # Ensure all arrays have the same length
             min_len = min(len(smoothed_timesteps), len(smoothed_mean_returns))
             smoothed_timesteps = smoothed_timesteps[:min_len]
             smoothed_mean_returns = smoothed_mean_returns[:min_len]
@@ -617,22 +667,40 @@ class HyperparameterTuner:
         plot_path_returns = os.path.join(save_folder, save_name + "_returns.png")
         plt.savefig(plot_path_returns)
         plt.close()
-
         print(f"Plots saved to '{save_folder}'")
 
 
 if __name__ == "__main__":
     hyperparams = [
-        {"modification": True, "max_modification": 0.05, "decay_modification": 2},
+        {},
+        {"leaky": True},
+        {"modification": True, "maxmod": 0.05, "decaymod": 1},
+        {"modification": True, "maxmod": 0.08, "decaymod": 0.5},
+        {"modification": True, "maxmod": 0.1, "decaymod": 0.5},
     ]
     tuner = HyperparameterTuner(env_name="FlappyBird-v0", runs=3)
-    # tuner.tune(hyperparams)
+    tuner.tune(hyperparams)
 
-    csv_files = [
-        "results_leaky.csv",
-        "results_modification_max_modification_0_05_decay_modification_0_5.csv",
-        "results_modification_max_modification_0_08_decay_modification_0_5.csv",
-        "results_modification_max_modification_0_1_decay_modification_2.csv",
-    ]
-    tuner.results = tuner.read_results_from_csv(csv_files)
-    tuner.plot_results("modification_best_vs_leaky")
+    # csv_files = [
+    #     "results_leaky.csv",
+    #     "results_maxmod_0_1_decaymod_0_5.csv",
+    #     # "results_maxmod_0_1_decaymod_1.csv",
+    #     # "results_maxmod_0_1_decaymod_2.csv",
+    #     # "results_maxmod_0_08_decaymod_1.csv",
+    #     # "results_maxmod_0_08_decaymod_2.csv",
+    #     "results_maxmod_0_1_decaymod_1_5_minmod_0_01.csv",
+    #     # "results_maxmod_0_1_decaymod_1_5_minmod_0_005.csv",
+    #     # "results_maxmod_0_1_decaymod_1_5.csv",
+    #     # "results_maxmod_0_1_decaymod_2_minmod_0_005.csv",
+    #     # "results_maxmod_0_1_decaymod_2.csv",
+    #     # "results_maxmod_0_2_decaymod_3.csv",
+    #     # "results_maxmod_0_05_decaymod_0_5.csv",
+    #     "results_maxmod_0_05_decaymod_1.csv",
+    #     # "results_maxmod_0_05_decaymod_2.csv",
+    #     "results_maxmod_0_08_decaymod_0_5.csv",
+    #     # "results_maxmod_0_08_decaymod_0_5_minmod_0_01.csv",
+    #     # "results_maxmod_0_08_decaymod_0_5_minmod_0_005.csv",
+    #     # "results_maxmod_0_1_decaymod_2_minmod_0_01.csv",
+    # ]
+    # tuner.results = tuner.read_results_from_csv(csv_files)
+    tuner.plot_results("CHECKING")

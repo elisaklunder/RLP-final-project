@@ -11,24 +11,20 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from gymnasium.vector import AsyncVectorEnv
+from environment_handler import OurEnvironmentHandler
 from gymnasium.wrappers import TimeLimit
 from torch.distributions import Categorical
 from torch.utils.tensorboard.writer import SummaryWriter
 
-from environment_handler import OurEnvironmentHandler
-
 torch.manual_seed(0)
 np.random.seed(0)
 
-HUMAN_RENDER: bool = False
-ENV_NAME: str = "FlappyBird-v0"
-EPOCHS: int = 10#500
-NUM_ENVS = 2#10
+EPOCHS: int = 500
+NUM_ENVS = 10
 LR: float = 0.0005
-ROLLOUT_STEPS: int = 8#1024
+ROLLOUT_STEPS: int = 1024
 GAMMA: float = 0.99
-UPDATE_EPOCHS: int = 16#128
+UPDATE_EPOCHS: int = 128
 CLIP_COEF: float = 0.2
 VF_COEF: float = 0.5
 ENT_COEF: float = 0.01
@@ -215,7 +211,7 @@ class Agent:
             returns[t] = discounted_return
 
         returns = returns.flatten()
-        returns_torch = torch.tensor(returns, dtype=torch.float32, device=DEVICE)
+        returns_torch = returns.clone().detach()
 
         state_values_flat = state_values.flatten()
         advantages = returns_torch - state_values_flat
@@ -235,14 +231,18 @@ class Agent:
                         self.min_modification,
                         self.max_modification
                         - (self.max_modification - self.min_modification)
-                        * (self.decay_modification * global_step / (EPOCHS * NUM_ENVS * ROLLOUT_STEPS)),
+                        * (
+                            self.decay_modification
+                            * global_step
+                            / (EPOCHS * NUM_ENVS * ROLLOUT_STEPS)
+                        ),
                     )
 
                 lower_bound = decay_coeff * ratios + (1 - decay_coeff) * (1 - CLIP_COEF)
                 upper_bound = decay_coeff * ratios + (1 - decay_coeff) * (1 + CLIP_COEF)
                 surr1 = advantages * ratios
                 surr2 = advantages * torch.clamp(ratios, lower_bound, upper_bound)
-                 
+
             else:
                 surr1 = ratios * advantages
                 surr2 = torch.clamp(ratios, 1 - CLIP_COEF, 1 + CLIP_COEF) * advantages
@@ -267,7 +267,8 @@ def evaluate_agent(agent: Agent, env: gym.Env) -> Tuple[float, float]:
     returns = []
     lengths = []
     for i in range(10):
-        env = TimeLimit(env, max_episode_steps=MAX_STEPS_PER_EPISODE)
+        if agent.env_name == "FlappyBird-v0":
+            env = TimeLimit(env, max_episode_steps=MAX_STEPS_PER_EPISODE)
         state, _ = env.reset()
         done = False
         current_return = 0
@@ -300,26 +301,26 @@ class Trainer:
             "max_modification": 0.08,
             "decay_modification": 1,
         }
-        
-        self.params = {**self.defaults, **hyperparams}      
+
+        self.params = {**self.defaults, **hyperparams}
         self.agent = None
         for key, value in self.params.items():
             setattr(self, key, value)
 
-
-
     def train(
         self, epochs: int = EPOCHS, rollout_steps: int = ROLLOUT_STEPS
     ) -> List[float]:
-        
-        
-        env_handler = OurEnvironmentHandler(env_id=self.env_name, num_envs=NUM_ENVS, max_steps_per_episode=MAX_STEPS_PER_EPISODE)
+        env_handler = OurEnvironmentHandler(
+            env_id=self.env_name,
+            num_envs=NUM_ENVS,
+            max_steps_per_episode=MAX_STEPS_PER_EPISODE,
+        )
         self.envs = env_handler.envs
+
         self.agent = Agent(env_handler.state_dim, env_handler.action_dim, self.params)
-        
-        
+
         global_step = 0
-        
+
         writer_tb = SummaryWriter(
             log_dir=f"runs/VEC_PPO_{self.env_name}_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         )
@@ -330,26 +331,30 @@ class Trainer:
         for update in range(epochs):
             states, _ = self.envs.reset()
 
-            for _ in range(rollout_steps):
+            for i in range(rollout_steps):
                 global_step += NUM_ENVS
                 actions = self.agent.choose_action_batch(states)
-                next_states, rewards, terminated, truncated, infos = self.envs.step(actions)
+                next_states, rewards, terminated, truncated, infos = self.envs.step(
+                    actions
+                )
                 done_mask = (terminated | truncated).astype(float)
                 self.agent.store_outcome_batch(rewards, done_mask)
                 states = next_states
 
             self.agent.learn(global_step)
 
-            env_eval = gym.make(self.env_name, use_lidar=False)
+            env_eval = env_handler._make_env(seed=i)()
             avg_return, avg_length = evaluate_agent(self.agent, env_eval)
             env_eval.close()
+            
             episode_lengths.append(avg_length)
             avg_returns.append(avg_return)
             writer_tb.add_scalar("rollout/ep_len_mean", avg_length, update)
             writer_tb.add_scalar("rollout/ep_rew_mean", avg_return, update)
 
-            print(f"Update {update}: avg_return = {avg_return}, avg_length = {avg_length}")
-            self.envs.close()
+            print(
+                f"Update {update}: avg_return = {avg_return}, avg_length = {avg_length}"
+            )
 
         return episode_lengths, avg_returns
 
@@ -364,14 +369,13 @@ class HyperparameterTuner:
         """Run multiple training sessions for the given hyperparameters and save results to CSV."""
         lengths = []
         returns = []
-        
-        param_str = ", ".join([f"{k}={v}" for k,v in hyperparams.items()])
-        
+
+        param_str = ", ".join([f"{k}={v}" for k, v in hyperparams.items()])
+
         for run in range(self.runs):
             print(f"Run {run + 1} with parameters: {param_str}")
             trainer = Trainer(**hyperparams, env_name=self.env_name)
             episode_lengths, episode_rewards = trainer.train()
-            # trainer.envs.close()
             lengths.append(episode_lengths)
             returns.append(episode_rewards)
 
@@ -382,7 +386,7 @@ class HyperparameterTuner:
                     filename_parts.append(f"{key}")
             else:
                 filename_parts.append(f"{key}_{str(value).replace('.', '_')}")
-        
+
         filename = "results_" + "_".join(filename_parts) + ".csv"
 
         with open(filename, "w", newline="") as csvfile:
@@ -419,10 +423,9 @@ class HyperparameterTuner:
     def tune(self, hyperparams: List[Dict[str, float]]) -> None:
         """Tune the hyperparameters and store the results."""
         for params in hyperparams:
-            
             lengths, returns = self.run_experiment(**params)
             stats = self.aggregate_results(lengths, returns)
-            
+
             label_parts = []
             for key, value in params.items():
                 if isinstance(value, bool):
@@ -431,9 +434,9 @@ class HyperparameterTuner:
                 else:
                     label_parts.append(f"{key}={value}")
             label = ", ".join(label_parts)
-            
+
             self.results[label] = stats
-            
+
     @staticmethod
     def read_results_from_csv(csv_files: List[str]) -> Dict[str, Dict[str, np.ndarray]]:
         """
@@ -512,15 +515,19 @@ class HyperparameterTuner:
             # Calculate original timesteps
             updates = len(data["mean_lengths"])
             timesteps = np.arange(updates) * ROLLOUT_STEPS * NUM_ENVS
-            
+
             # Apply smoothing
-            smoothed_mean_lengths = self.smooth_data(data["mean_lengths"], smoothing_window)
-            smoothed_std_lengths = self.smooth_data(data["std_lengths"], smoothing_window)
-            
+            smoothed_mean_lengths = self.smooth_data(
+                data["mean_lengths"], smoothing_window
+            )
+            smoothed_std_lengths = self.smooth_data(
+                data["std_lengths"], smoothing_window
+            )
+
             # Adjust timesteps to match smoothed data length
             pad = (smoothing_window - 1) // 2
-            smoothed_timesteps = timesteps[pad:-(pad + 1) if pad > 0 else None]
-            
+            smoothed_timesteps = timesteps[pad : -(pad + 1) if pad > 0 else None]
+
             # Ensure all arrays have the same length
             min_len = min(len(smoothed_timesteps), len(smoothed_mean_lengths))
             smoothed_timesteps = smoothed_timesteps[:min_len]
@@ -550,15 +557,19 @@ class HyperparameterTuner:
             # Calculate original timesteps
             updates = len(data["mean_returns"])
             timesteps = np.arange(updates) * ROLLOUT_STEPS * NUM_ENVS
-            
+
             # Apply smoothing
-            smoothed_mean_returns = self.smooth_data(data["mean_returns"], smoothing_window)
-            smoothed_std_returns = self.smooth_data(data["std_returns"], smoothing_window)
-            
+            smoothed_mean_returns = self.smooth_data(
+                data["mean_returns"], smoothing_window
+            )
+            smoothed_std_returns = self.smooth_data(
+                data["std_returns"], smoothing_window
+            )
+
             # Adjust timesteps to match smoothed data length
             pad = (smoothing_window - 1) // 2
-            smoothed_timesteps = timesteps[pad:-(pad + 1) if pad > 0 else None]
-            
+            smoothed_timesteps = timesteps[pad : -(pad + 1) if pad > 0 else None]
+
             # Ensure all arrays have the same length
             min_len = min(len(smoothed_timesteps), len(smoothed_mean_returns))
             smoothed_timesteps = smoothed_timesteps[:min_len]
@@ -587,17 +598,9 @@ class HyperparameterTuner:
 
 if __name__ == "__main__":
     hyperparams = [
-        {"modification": True, "max_modification": 0.05, "decay_modification": 0.5},
+        {"modification": False},
     ]
-    # TradingEnv
-    # FlappyBird-v0
-    tuner = HyperparameterTuner(env_name="TradingEnv", runs=3)
-    tuner.tune(hyperparams)
 
-    # csv_files = [
-    #     "results_gamma_0_99_lr_0_001.csv",
-    #     "results_gamma_0_99_lr_0_0005.csv",
-    #     "results_gamma_0_99_lr_0_001_mod.csv",
-    # ]
-    # tuner.results = tuner.read_results_from_csv(csv_files)
-    tuner.plot_results("modification_low_start")
+    tuner = HyperparameterTuner(env_name="TradingEnv", runs=1)
+    tuner.tune(hyperparams)
+    tuner.plot_results("TradingEnv")
