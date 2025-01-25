@@ -19,7 +19,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 torch.manual_seed(0)
 np.random.seed(0)
 
-EPOCHS: int = 500
+EPOCHS: int = 1000
 NUM_ENVS = 10
 LR: float = 0.0005
 ROLLOUT_STEPS: int = 1024
@@ -266,7 +266,7 @@ def evaluate_agent(agent: Agent, env: gym.Env) -> Tuple[float, float]:
     """
     returns = []
     lengths = []
-    for i in range(10):
+    for i in range(1):
         if agent.env_name == "FlappyBird-v0":
             env = TimeLimit(env, max_episode_steps=MAX_STEPS_PER_EPISODE)
         state, _ = env.reset()
@@ -292,7 +292,7 @@ class Trainer:
         """
 
         self.defaults = {
-            "gamma": 0.99,
+            "gamma": 0.95,
             "learning_rate": 0.0005,
             "modification": False,
             "env_name": env_name,
@@ -346,7 +346,7 @@ class Trainer:
             env_eval = env_handler._make_env(seed=i)()
             avg_return, avg_length = evaluate_agent(self.agent, env_eval)
             env_eval.close()
-            
+
             episode_lengths.append(avg_length)
             avg_returns.append(avg_return)
             writer_tb.add_scalar("rollout/ep_len_mean", avg_length, update)
@@ -438,37 +438,101 @@ class HyperparameterTuner:
             self.results[label] = stats
 
     @staticmethod
-    def read_results_from_csv(csv_files: List[str]) -> Dict[str, Dict[str, np.ndarray]]:
-        """
-        Reads the results from the given CSV files and aggregates them.
-        Args:
-            csv_files: List of CSV file paths containing the results.
-        Returns:
-            A dictionary where each key is a hyperparameter label, and the value contains
-            mean and standard deviation of episode lengths and returns.
-        """
-        results = {}
+    def merge_separate_numbers(parts: List[str]) -> List[str]:
+        merged = []
+        skip_next = False
 
+        def is_all_digits(s: str) -> bool:
+            return all(ch.isdigit() for ch in s)
+
+        for i in range(len(parts)):
+            if skip_next:
+                skip_next = False
+                continue
+            if (
+                i + 1 < len(parts)
+                and is_all_digits(parts[i])
+                and is_all_digits(parts[i + 1])
+            ):
+                merged.append(parts[i] + "_" + parts[i + 1])
+                skip_next = True
+            else:
+                merged.append(parts[i])
+        return merged
+
+    def read_results_from_csv(
+        self, csv_files: List[str]
+    ) -> Dict[str, Dict[str, np.ndarray]]:
+        """
+        Reads the results from the given CSV files and aggregates them,
+        creating nicer labels for well-known hyperparameters.
+        Any unknown tokens will simply be appended as-is (e.g. 'modification' -> 'modification').
+        Returns a dict mapping from the parsed label to another dict containing mean/std for lengths and returns.
+        """
+        KEY_MAPPING = {
+            "gamma": "γ",
+            "lr": "LR",
+            "maxmod": "α(max)",
+            "minmod": "α(min)",
+            "decaymod": "k",
+            "leaky": "leaky",
+            "mod": "mod",
+        }
+
+        def combine_numeric_parts(*parts: str) -> str:
+            joined = ".".join(parts)
+            as_float = float(joined)
+            return f"{as_float:g}"
+
+        def is_all_digits(s: str) -> bool:
+            return all(ch.isdigit() for ch in s)
+
+        results = {}
         for csv_file in csv_files:
             data = pd.read_csv(csv_file)
-
-            # Extract hyperparameters from filename
             base_name = os.path.splitext(os.path.basename(csv_file))[0]
-            parts = base_name.split("_")
-            gamma = float(
-                (
-                    parts[parts.index("gamma") + 1]
-                    + "_"
-                    + parts[parts.index("gamma") + 2]
-                ).replace("_", ".")
-            )
-            lr = float(
-                (
-                    parts[parts.index("lr") + 1] + "_" + parts[parts.index("lr") + 2]
-                ).replace("_", ".")
-            )
-            is_annealing = "mod" in parts
-            label = f"γ={gamma}, LR={lr}" + (" (Annealing)" if is_annealing else "")
+
+            parts = base_name.split("_")[1:]
+
+            if not parts or (len(parts) == 1 and not parts[0]):
+                label = "standard ppo"
+            else:
+                parts = self.merge_separate_numbers(parts)
+
+                label_parts = []
+                i = 0
+                while i < len(parts):
+                    token = parts[i]
+                    if token in KEY_MAPPING:
+                        display_key = KEY_MAPPING[token]
+
+                        if i + 1 < len(parts):
+                            next_token = parts[i + 1]
+                            if "_" in next_token:
+                                subparts = next_token.split("_")
+                                if all(is_all_digits(sp) for sp in subparts):
+                                    numeric_str = combine_numeric_parts(*subparts)
+                                    label_parts.append(f"{display_key}={numeric_str}")
+                                    i += 2
+                                    continue
+                            if is_all_digits(next_token):
+                                label_parts.append(f"{display_key}={next_token}")
+                                i += 2
+                                continue
+                        label_parts.append(display_key)
+                        i += 1
+                    else:
+                        if "_" in token:
+                            subparts = token.split("_")
+                            if all(is_all_digits(sp) for sp in subparts):
+                                numeric_str = combine_numeric_parts(*subparts)
+                                label_parts.append(numeric_str)
+                                i += 1
+                                continue
+                        label_parts.append(token)
+                        i += 1
+
+                label = ", ".join(label_parts)
 
             grouped = data.groupby("Update")
             mean_lengths = grouped["Episode_Length"].mean().values
@@ -509,14 +573,11 @@ class HyperparameterTuner:
 
         os.makedirs(save_folder, exist_ok=True)
 
-        # Plot episode lengths
         plt.figure(figsize=(10, 6))
         for label, data in self.results.items():
-            # Calculate original timesteps
             updates = len(data["mean_lengths"])
             timesteps = np.arange(updates) * ROLLOUT_STEPS * NUM_ENVS
 
-            # Apply smoothing
             smoothed_mean_lengths = self.smooth_data(
                 data["mean_lengths"], smoothing_window
             )
@@ -524,11 +585,9 @@ class HyperparameterTuner:
                 data["std_lengths"], smoothing_window
             )
 
-            # Adjust timesteps to match smoothed data length
             pad = (smoothing_window - 1) // 2
             smoothed_timesteps = timesteps[pad : -(pad + 1) if pad > 0 else None]
 
-            # Ensure all arrays have the same length
             min_len = min(len(smoothed_timesteps), len(smoothed_mean_lengths))
             smoothed_timesteps = smoothed_timesteps[:min_len]
             smoothed_mean_lengths = smoothed_mean_lengths[:min_len]
@@ -551,14 +610,11 @@ class HyperparameterTuner:
         plt.savefig(plot_path_lengths)
         plt.close()
 
-        # Plot episode returns
         plt.figure(figsize=(10, 6))
         for label, data in self.results.items():
-            # Calculate original timesteps
             updates = len(data["mean_returns"])
             timesteps = np.arange(updates) * ROLLOUT_STEPS * NUM_ENVS
 
-            # Apply smoothing
             smoothed_mean_returns = self.smooth_data(
                 data["mean_returns"], smoothing_window
             )
@@ -566,11 +622,9 @@ class HyperparameterTuner:
                 data["std_returns"], smoothing_window
             )
 
-            # Adjust timesteps to match smoothed data length
             pad = (smoothing_window - 1) // 2
             smoothed_timesteps = timesteps[pad : -(pad + 1) if pad > 0 else None]
 
-            # Ensure all arrays have the same length
             min_len = min(len(smoothed_timesteps), len(smoothed_mean_returns))
             smoothed_timesteps = smoothed_timesteps[:min_len]
             smoothed_mean_returns = smoothed_mean_returns[:min_len]
@@ -592,15 +646,29 @@ class HyperparameterTuner:
         plot_path_returns = os.path.join(save_folder, save_name + "_returns.png")
         plt.savefig(plot_path_returns)
         plt.close()
-
         print(f"Plots saved to '{save_folder}'")
 
 
 if __name__ == "__main__":
     hyperparams = [
-        {"modification": False},
+        {"gamma": 0.95, "learning_rate": 0.0005, "leaky": True},
+        {
+            "gamma": 0.95,
+            "learning_rate": 0.0005,
+            "modification": True,
+            "max_modification": 0.05,
+            "decay_modification": 1,
+        },
     ]
 
-    tuner = HyperparameterTuner(env_name="TradingEnv", runs=1)
+    tuner = HyperparameterTuner(env_name="TradingEnv", runs=3)
     tuner.tune(hyperparams)
-    tuner.plot_results("TradingEnv")
+    # tuner.results = tuner.read_results_from_csv(
+    #     [
+    #         "results_gamma_0_95_learning_rate_0_005.csv",
+    #         "results_gamma_0_95_learning_rate_0_0005.csv",
+    #         "results_gamma_0_99_learning_rate_0_005.csv",
+    #         "results_gamma_0_99_learning_rate_0_0005.csv",
+    #     ]
+    # )
+    # tuner.plot_results("TradingEnv_hyperparams_tuning")

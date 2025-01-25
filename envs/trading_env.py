@@ -5,11 +5,11 @@ import gymnasium as gym
 import pandas as pd
 from stable_baselines3 import PPO
 
-total_timesteps: int = 1_000_000
+total_timesteps: int = 50_000_000
 learning_rate: float = 0.0005
 num_envs: int = 1
 num_steps: int = 1024
-gamma: float = 0.95
+gamma: float = 0.99
 gae_lambda: float = 0.95
 num_minibatches: int = 4
 update_epochs: int = 128
@@ -20,8 +20,7 @@ max_grad_norm: float = 0.5
 
 
 def download_dataset():
-    url = "https://raw.githubusercontent.com/ClementPerroud/Gym-Trading-Env/main/examples/data/BTC_USD-Hourly.csv"
-    df = pd.read_csv(url, parse_dates=["date"], index_col="date")
+    df = pd.read_csv("envs/BTC-USD-hourly.csv", parse_dates=["date"], index_col="date")
     df.sort_index(inplace=True)
     df.dropna(inplace=True)
     df.drop_duplicates(inplace=True)
@@ -140,13 +139,3 @@ if __name__ == "__main__":
         tensorboard_log=f"runs/SB3_PPO_trading_{datetime.now().strftime('%Y%m%d-%H%M%S')}",
     )
     model.learn(total_timesteps=total_timesteps)
-    
-    # for i in range(100):
-    #     done, truncated = False, False
-    #     observation, info = env.reset()
-
-    #     while not done and not truncated:
-    #         position_index, _ = model.predict(observation)
-    #         observation, reward, done, truncated, info = env.step(position_index)
-
-    #     env.unwrapped.save_for_render(dir="render_logs")

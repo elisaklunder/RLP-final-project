@@ -672,35 +672,18 @@ class HyperparameterTuner:
 
 if __name__ == "__main__":
     hyperparams = [
-        {},
-        {"leaky": True},
-        {"modification": True, "maxmod": 0.05, "decaymod": 1},
         {"modification": True, "maxmod": 0.08, "decaymod": 0.5},
         {"modification": True, "maxmod": 0.1, "decaymod": 0.5},
     ]
-    tuner = HyperparameterTuner(env_name="FlappyBird-v0", runs=3)
-    tuner.tune(hyperparams)
+    tuner = HyperparameterTuner(env_name="FlappyBird-v0", runs=5)
+    # tuner.tune(hyperparams)
 
-    # csv_files = [
-    #     "results_leaky.csv",
-    #     "results_maxmod_0_1_decaymod_0_5.csv",
-    #     # "results_maxmod_0_1_decaymod_1.csv",
-    #     # "results_maxmod_0_1_decaymod_2.csv",
-    #     # "results_maxmod_0_08_decaymod_1.csv",
-    #     # "results_maxmod_0_08_decaymod_2.csv",
-    #     "results_maxmod_0_1_decaymod_1_5_minmod_0_01.csv",
-    #     # "results_maxmod_0_1_decaymod_1_5_minmod_0_005.csv",
-    #     # "results_maxmod_0_1_decaymod_1_5.csv",
-    #     # "results_maxmod_0_1_decaymod_2_minmod_0_005.csv",
-    #     # "results_maxmod_0_1_decaymod_2.csv",
-    #     # "results_maxmod_0_2_decaymod_3.csv",
-    #     # "results_maxmod_0_05_decaymod_0_5.csv",
-    #     "results_maxmod_0_05_decaymod_1.csv",
-    #     # "results_maxmod_0_05_decaymod_2.csv",
-    #     "results_maxmod_0_08_decaymod_0_5.csv",
-    #     # "results_maxmod_0_08_decaymod_0_5_minmod_0_01.csv",
-    #     # "results_maxmod_0_08_decaymod_0_5_minmod_0_005.csv",
-    #     # "results_maxmod_0_1_decaymod_2_minmod_0_01.csv",
-    # ]
-    # tuner.results = tuner.read_results_from_csv(csv_files)
-    tuner.plot_results("CHECKING")
+    csv_files = [
+        "results_.csv",
+        "results_leaky.csv",
+        "results_modification_maxmod_0_05_decaymod_1.csv",
+        # "results_modification_maxmod_0_08_decaymod_0_5.csv",
+        # "results_modification_maxmod_0_1_decaymod_0_5.csv",
+    ]
+    tuner.results = tuner.read_results_from_csv(csv_files)
+    tuner.plot_results("CHECKING", smoothing_window=50)
