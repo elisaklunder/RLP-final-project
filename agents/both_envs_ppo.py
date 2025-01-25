@@ -11,7 +11,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from environment_handler import OurEnvironmentHandler
+from envs.environment_handler import OurEnvironmentHandler
 from gymnasium.wrappers import TimeLimit
 from torch.distributions import Categorical
 from torch.utils.tensorboard.writer import SummaryWriter
@@ -651,7 +651,7 @@ class HyperparameterTuner:
 
 if __name__ == "__main__":
     hyperparams = [
-        {"gamma": 0.95, "learning_rate": 0.0005, "leaky": True},
+        # {"gamma": 0.95, "learning_rate": 0.0005, "leaky": True},
         {
             "gamma": 0.95,
             "learning_rate": 0.0005,
