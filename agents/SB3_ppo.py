@@ -3,10 +3,18 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from stable_baselines3 import PPO
+from sb3_with_modification import PPO
 from stable_baselines3.common.callbacks import BaseCallback
+
+import sys
+import os
 from stable_baselines3.common.env_util import make_vec_env
 import gymnasium as gym
+
+current_file_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_file_dir, '..'))
+sys.path.insert(0, project_root)
+
 
 class SB3EnvironmentHandler:
     def __init__(self, env_type: str, human_render: bool = False, num_envs: int = 1):
@@ -76,6 +84,7 @@ class PPOConfig:
     clip_coef: float = 0.2
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
+    modification: bool = True
 
 
 class PPOAgentSB:
