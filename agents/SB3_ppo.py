@@ -5,9 +5,24 @@ import pandas as pd
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.env_util import make_vec_env
+import gymnasium as gym
 
-from envs.environment_handler import SB3EnvironmentHandler
+class SB3EnvironmentHandler:
+    def __init__(self, env_type: str, human_render: bool = False, num_envs: int = 1):
+        self.env_type = env_type
+        self.num_envs = num_envs
+        self.human_render = human_render
+        self.env = make_vec_env(lambda: gym.make(env_type), n_envs=num_envs)
 
+    def reset(self):
+        return self.env.reset()
+
+    def step(self, action):
+        return self.env.step(action)
+
+    def close(self):
+        self.env.close()
 
 class SaveTrainingMetricsCallback(BaseCallback):
     """

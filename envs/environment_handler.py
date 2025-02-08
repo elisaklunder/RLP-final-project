@@ -4,23 +4,10 @@ from gymnasium.vector import AsyncVectorEnv
 from gymnasium.wrappers import TimeLimit
 from stable_baselines3.common.env_util import make_vec_env
 from trading_env import download_dataset, make_features
+from metadrive.envs.metadrive_env import MetaDriveEnv
 
 
-class SB3EnvironmentHandler:
-    def __init__(self, env_type: str, human_render: bool = False, num_envs: int = 1):
-        self.env_type = env_type
-        self.num_envs = num_envs
-        self.human_render = human_render
-        self.env = make_vec_env(lambda: gym.make(env_type), n_envs=num_envs)
 
-    def reset(self):
-        return self.env.reset()
-
-    def step(self, action):
-        return self.env.step(action)
-
-    def close(self):
-        self.env.close()
 
 
 class OurEnvironmentHandler:
@@ -73,6 +60,24 @@ class OurEnvironmentHandler:
                     borrow_interest_rate=0.0003 / 100,
                     render_mode=self.human_render,
                 )
+            elif self.env_id == "MetaDriveEnv":
+                env = MetaDriveEnv(
+                    dict(
+                        map="C",
+                        # This policy setting simplifies the task
+                        discrete_action=True,
+                        discrete_throttle_dim=3,
+                        discrete_steering_dim=3,
+                        horizon=500,
+                        # scenario setting
+                        random_spawn_lane_index=False,
+                        num_scenarios=1,
+                        start_seed=0,
+                        traffic_density=0,
+                        accident_prob=0,
+                        log_level=50,
+                    )
+                )            
             else:
                 env = gym.make(self.env_id)
 
@@ -107,3 +112,13 @@ class OurEnvironmentHandler:
     @property
     def single_action_space(self):
         return self.envs.single_action_space
+
+if __name__ == "__main__":
+    env_handler = OurEnvironmentHandler(env_id="MetaDriverEnv", human_render=False)
+    obs = env_handler.reset()
+    print(f"Initial observation: {obs}")
+    action = np.array([0, 1])
+    obs, reward, done, info = env_handler.step(action)
+    print(f"Next observation: {obs}, reward: {reward}, done: {done}")
+    env_handler.close()
+    print("Environment closed.")

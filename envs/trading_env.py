@@ -56,16 +56,13 @@ def make_features(df):
 
     # -------------------------------------------------------------------------
     # 9. Relative Strength Index (RSI)
-    #    RSI = 100 - (100 / (1 + RS)),
-    #    where RS = (average gain over N periods) / (average loss over N periods).
-    #    We'll pick a 14-period RSI for example.
 
     window_rsi = 14
     delta = df["close"].diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
 
-    # Use exponential moving average for RSI
+    # exponential moving average for RSI
     alpha = 1.0 / window_rsi
     avg_gain = gain.ewm(alpha=alpha, min_periods=window_rsi).mean()
     avg_loss = loss.ewm(alpha=alpha, min_periods=window_rsi).mean()
@@ -76,22 +73,12 @@ def make_features(df):
     # Normalize RSI a bit to keep everything in a somewhat consistent scale
     df["feature_rsi"] = df["feature_rsi"] / 100.0  # [0,1] range
 
-    # -------------------------------------------------------------------------
     # 10. MACD (Moving Average Convergence Divergence)
-    #     MACD = EMA(12) - EMA(26)
-    #     We'll store the difference normalized by the price to keep scale smaller.
-
     ema_fast = df["close"].ewm(span=12, adjust=False).mean()
     ema_slow = df["close"].ewm(span=26, adjust=False).mean()
     df["feature_macd"] = (ema_fast - ema_slow) / df["close"]
 
-    # -------------------------------------------------------------------------
     # 11. Bollinger Bands
-    #     Typically: middle band = MA(20),
-    #     upper band = MA(20) + 2 * std(20),
-    #     lower band = MA(20) - 2 * std(20).
-    #     We'll store the band width and band position as features.
-
     window_bb = 20
     ma_bb = df["close"].rolling(window=window_bb).mean()
     std_bb = df["close"].rolling(window=window_bb).std()
@@ -101,8 +88,6 @@ def make_features(df):
         2 * std_bb
     )  # position relative to bands
 
-    # -------------------------------------------------------------------------
-    # Finally, drop any rows with NaN from newly created features
     df.dropna(inplace=True)
 
     return df

@@ -5,21 +5,23 @@ from typing import Dict, List, Tuple
 
 import flappy_bird_gymnasium  # noqa: F401
 import gymnasium as gym
+from metadrive.envs.metadrive_env import MetaDriveEnv  # noqa: F401
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from envs.environment_handler import OurEnvironmentHandler
 from gymnasium.wrappers import TimeLimit
 from torch.distributions import Categorical
 from torch.utils.tensorboard.writer import SummaryWriter
 
+from envs.environment_handler import OurEnvironmentHandler
+
 torch.manual_seed(0)
 np.random.seed(0)
 
-EPOCHS: int = 1000
+EPOCHS: int = 500
 NUM_ENVS = 10
 LR: float = 0.0005
 ROLLOUT_STEPS: int = 1024
@@ -293,13 +295,14 @@ class Trainer:
 
         self.defaults = {
             "gamma": 0.95,
-            "learning_rate": 0.0005,
+            "learning_rate": 0.0001,
             "modification": False,
             "env_name": env_name,
             "leaky": False,
             "min_modification": 0,
             "max_modification": 0.08,
             "decay_modification": 1,
+            
         }
 
         self.params = {**self.defaults, **hyperparams}
@@ -470,12 +473,13 @@ class HyperparameterTuner:
         Returns a dict mapping from the parsed label to another dict containing mean/std for lengths and returns.
         """
         KEY_MAPPING = {
+            "leaky": "Leaky PPO",
+            "modification": "TALC PPO",
             "gamma": "γ",
             "lr": "LR",
             "maxmod": "α(max)",
             "minmod": "α(min)",
             "decaymod": "k",
-            "leaky": "leaky",
             "mod": "mod",
         }
 
@@ -495,7 +499,7 @@ class HyperparameterTuner:
             parts = base_name.split("_")[1:]
 
             if not parts or (len(parts) == 1 and not parts[0]):
-                label = "standard ppo"
+                label = "Standard PPO"
             else:
                 parts = self.merge_separate_numbers(parts)
 
@@ -650,25 +654,19 @@ class HyperparameterTuner:
 
 
 if __name__ == "__main__":
-    hyperparams = [
-        # {"gamma": 0.95, "learning_rate": 0.0005, "leaky": True},
-        {
-            "gamma": 0.95,
-            "learning_rate": 0.0005,
-            "modification": True,
-            "max_modification": 0.05,
-            "decay_modification": 1,
-        },
-    ]
+    tuner = HyperparameterTuner(env_name="FlappyBird-v0", runs=3)
 
-    tuner = HyperparameterTuner(env_name="TradingEnv", runs=3)
-    tuner.tune(hyperparams)
-    # tuner.results = tuner.read_results_from_csv(
-    #     [
-    #         "results_gamma_0_95_learning_rate_0_005.csv",
-    #         "results_gamma_0_95_learning_rate_0_0005.csv",
-    #         "results_gamma_0_99_learning_rate_0_005.csv",
-    #         "results_gamma_0_99_learning_rate_0_0005.csv",
-    #     ]
-    # )
-    # tuner.plot_results("TradingEnv_hyperparams_tuning")
+    # hyperparams = [
+    #     {},
+    # ]
+
+    # tuner.tune(hyperparams)
+
+    tuner.results = tuner.read_results_from_csv(
+        [
+            "results_.csv",
+            "results_leaky.csv",
+            "results_modification_maxmod_0_05_decaymod_1.csv",
+        ]
+    )
+    tuner.plot_results("FlappyBird_AAAAAAAA")
