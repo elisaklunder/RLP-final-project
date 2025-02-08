@@ -3,8 +3,15 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from stable_baselines3 import PPO
+from sb3_with_modification import PPO
 from stable_baselines3.common.callbacks import BaseCallback
+
+import sys
+import os
+
+current_file_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_file_dir, '..'))
+sys.path.insert(0, project_root)
 
 from envs.environment_handler import SB3EnvironmentHandler
 
@@ -61,6 +68,7 @@ class PPOConfig:
     clip_coef: float = 0.2
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
+    modification: bool = True
 
 
 class PPOAgentSB:
