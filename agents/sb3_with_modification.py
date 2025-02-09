@@ -4,13 +4,15 @@ from typing import Any, ClassVar, Dict, Optional, Type, TypeVar, Union
 import numpy as np
 import torch as th
 from gymnasium import spaces
-from torch.nn import functional as F
-
 from stable_baselines3.common.buffers import RolloutBuffer
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
-from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
-from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
+from stable_baselines3.common.policies import (ActorCriticCnnPolicy,
+                                               ActorCriticPolicy, BasePolicy,
+                                               MultiInputActorCriticPolicy)
+from stable_baselines3.common.type_aliases import (GymEnv, MaybeCallback,
+                                                   Schedule)
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
+from torch.nn import functional as F
 
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
 
@@ -217,6 +219,7 @@ class PPO(OnPolicyAlgorithm):
         ### OUR MODIFICATION ###
         global_step = 0
         ########################
+        
         continue_training = True
         # train for n_epochs epochs
         for epoch in range(self.n_epochs):
@@ -372,4 +375,4 @@ if __name__ == "__main__":
     while True:
         action, _states = model.predict(obs)
         obs, rewards, dones, info = vec_env.step(action)
-        vec_env.render("human")
+        vec_env.render("human")    

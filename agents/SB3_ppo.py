@@ -1,36 +1,19 @@
+from datetime import datetime
+import os
+import sys
 from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-
 from sb3_with_modification import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 
-import sys
-import os
-from stable_baselines3.common.env_util import make_vec_env
-import gymnasium as gym
-
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_file_dir, '..'))
+project_root = os.path.abspath(os.path.join(current_file_dir, ".."))
 sys.path.insert(0, project_root)
 
+from envs.environment_handler import SB3EnvironmentHandler
 
-class SB3EnvironmentHandler:
-    def __init__(self, env_type: str, human_render: bool = False, num_envs: int = 1):
-        self.env_type = env_type
-        self.num_envs = num_envs
-        self.human_render = human_render
-        self.env = make_vec_env(lambda: gym.make(env_type), n_envs=num_envs)
-
-    def reset(self):
-        return self.env.reset()
-
-    def step(self, action):
-        return self.env.step(action)
-
-    def close(self):
-        self.env.close()
 
 class SaveTrainingMetricsCallback(BaseCallback):
     """
@@ -68,11 +51,12 @@ class SaveTrainingMetricsCallback(BaseCallback):
         pd.DataFrame(self.metrics).to_csv(self.log_path, index=False)
         print(f"Training metrics saved to {self.log_path}")
 
+
 @dataclass
 class PPOConfig:
-    human_render: bool = False
-    env_id: str = "CartPole-v1"
-    total_timesteps: int = 100_000
+    human_render: str = None
+    env_id: str = "MetaDriveEnv"
+    total_timesteps: int = 1_000_000
     learning_rate: float = 0.0005
     num_envs: int = 1
     num_steps: int = 1024
@@ -84,7 +68,7 @@ class PPOConfig:
     clip_coef: float = 0.2
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
-    modification: bool = True
+    modification: bool = False
 
 
 class PPOAgentSB:
@@ -100,7 +84,7 @@ class PPOAgentSB:
     ):
         self.model = PPO(
             "MlpPolicy",
-            self.env_handler.env,
+            self.env_handler.envs,
             learning_rate=config.learning_rate,
             gamma=config.gamma,
             # !! batch size is the number of steps times the number of environments divided by the number of minibatches
@@ -113,7 +97,7 @@ class PPOAgentSB:
             gae_lambda=config.gae_lambda,
             normalize_advantage=config.norm_adv,
             verbose=verbose,
-            tensorboard_log=f"runs/SB3_PPO_{config.env_id}",
+            tensorboard_log=f"runs/SB3_PPO_{config.env_id}_{datetime.now().strftime('%Y%m%d-%H%M%S')}",
         )
         if log_path:
             callback = SaveTrainingMetricsCallback(log_path=log_path)
@@ -151,7 +135,7 @@ if __name__ == "__main__":
     config = PPOConfig()
 
     env_handler = SB3EnvironmentHandler(
-        env_type=config.env_id,
+        env_id=config.env_id,
         human_render=config.human_render,
         num_envs=config.num_envs,
     )
@@ -162,7 +146,7 @@ if __name__ == "__main__":
 
     agent.train(
         config=config,
-        verbose=0,
+        verbose=1,
     )
 
     env_handler.close()
